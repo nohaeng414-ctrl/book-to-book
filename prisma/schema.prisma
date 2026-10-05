@@ -1,0 +1,114 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  hashedPassword String?
+  city           String   //
+  bio            String?  // نبذة عن ذوق المستخدم بالقراءة
+  points         Int      @default(0)
+
+  // العلاقات
+  books          Book[]    @relation("UserBooks")
+  favoriteBooks  Book[]    @relation("UserFavorites") 
+  initiatedSwaps Swap[]    @relation("RequesterSwaps")
+  receivedSwaps  Swap[]    @relation("ReceiverSwaps")
+  messages       Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Book {
+  id          String       @id @default(uuid())
+  title       String
+  author      String
+  description String?
+  coverUrl    String?
+  points      Int          @default(1) // نقاط الكتاب
+  category    BookCategory @default(NOVELS) // التصنيف من القائمة حصراً
+  condition   String?      // حالة الكتاب: جديد، ممتاز، مقبول
+  isAvailable Boolean      @default(true) // بيصير false أول ما يتم التبادل
+
+  ownerId String
+  owner   User   @relation("UserBooks", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // المستخدمين اللي حطوا هالكتاب بالمفضلة
+  favoritedBy User[] @relation("UserFavorites")
+
+  // العلاقات مع عمليات التبادل
+  swapsAsRequested Swap[] @relation("RequestedBook")
+  swapsAsOffered   Swap[] @relation("OfferedBook")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Swap {
+  id String @id @default(uuid())
+
+  // اللي طلب التبديل
+  requesterId String
+  requester   User   @relation("RequesterSwaps", fields: [requesterId], references: [id])
+
+  // صاحب الكتاب المطلوب
+  receiverId String
+  receiver   User   @relation("ReceiverSwaps", fields: [receiverId], references: [id])
+
+  // الكتاب المطلوب
+  requestedBookId String
+  requestedBook   Book   @relation("RequestedBook", fields: [requestedBookId], references: [id])
+
+  // الكتاب المعروض كبديل
+  offeredBookId String?
+  offeredBook   Book?   @relation("OfferedBook", fields: [offeredBookId], references: [id])
+
+  status SwapStatus @default(PENDING)
+
+  messages Message[] // الشات الخاص بهالعملية بس
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id      String @id @default(uuid())
+  content String
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+
+  swapId String
+  swap   Swap   @relation(fields: [swapId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+enum SwapStatus {
+  PENDING   // بانتظار الرد
+  ACCEPTED  // تمت الموافقة
+  REJECTED  // مرفوض
+  COMPLETED // اكتمل التبادل بنجاح
+}
+
+// قائمة التصنيفات المحددة بدقة
+enum BookCategory {
+  NOVELS           // روايات أدبية
+  HISTORY          // تاريخ
+  SELF_DEVELOPMENT // تطوير ذات
+  PHILOSOPHY       // فلسفة وعلم نفس
+  SCIENCE          // علوم ومعارف
+  RELIGION         // علوم دينية
+  POETRY           // شعر وأدب
+  ARTS             // فنون وعمارة
+}
+
