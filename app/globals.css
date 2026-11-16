@@ -1,5 +1,14 @@
 @import "tailwindcss";
+@theme {
+  /* الكحلي الليلي الملكي للأزرار الرئيسية */
+  --color-brand-primary: #0F172A;
+  --color-brand-primary-hover: #1E293B;
 
+  /* لمسات ناعمة إضافية */
+  --color-brand-accent: #D98CB3;
+  --color-brand-accent-hover: #C5749D;
+  --color-brand-teal: #5A9BAE;
+}
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -23,4 +32,16 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html[dir="ltr"] [dir="rtl"] {
+  direction: ltr !important;
+}
+
+html[dir="ltr"] .text-right {
+  text-align: left !important;
+}
+
+html[dir="ltr"] .text-left {
+  text-align: right !important;
 }

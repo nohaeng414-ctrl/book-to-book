@@ -1,4 +1,4 @@
-import { PrismaClient, BookCategory } from '@prisma/client'
+import { PrismaClient } from '../generated/prisma-full'
 
 const prisma = new PrismaClient()
 
@@ -11,23 +11,22 @@ async function main() {
       name: 'نهى الزيبق',
       email: 'noha@example.com',
       city: 'الرياض',
-      bio: 'عاشقة للروايات والكتب الفلسفية والتاريخية.',
+      bio: 'الروايات والكتب الفلسفية والتاريخية.',
     },
   })
 
-  // تنظيف الرفوف القديمة عشان ما يصير تكرار
+  // تنظيف الرفوف القديمة
   await prisma.book.deleteMany({
     where: { ownerId: user.id }
   })
 
-  // إضافة الكتب بالتصنيفات البرمجية الصح (Enums)
   await prisma.book.createMany({
     data: [
       {
         title: 'دمشق لنا إلى يوم القيامة',
         author: 'نهى الزيبق',
         description: 'رواية تأخذك في رحلة عميقة بين عبق الحارات القديمة وحكايات الصمود والذكريات التي لا تموت.',
-        category: 'NOVELS', // روايات
+        category: 'NOVELS',
         condition: 'LIKE_NEW',
         ownerId: user.id,
       },
@@ -35,7 +34,7 @@ async function main() {
         title: 'الإنسان يبحث عن المعنى',
         author: 'فيكتور فرانكل',
         description: 'كتاب نفسي وعميق يستكشف قوة الإرادة البشرية وإيجاد المعنى حتى في أقسى الظروف.',
-        category: 'PHILOSOPHY', // فلسفة وعلم نفس
+        category: 'PHILOSOPHY',
         condition: 'GOOD',
         ownerId: user.id,
       },
@@ -43,7 +42,7 @@ async function main() {
         title: 'قواعد العشق الأربعون',
         author: 'إليف شافاق',
         description: 'رواية ساحرة تمتزج فيها روح الصوفية وحب جلال الدين الرومي وشمس التبريزي.',
-        category: 'HISTORY', // تاريخ
+        category: 'HISTORY',
         condition: 'LIKE_NEW',
         ownerId: user.id,
       },
@@ -51,14 +50,14 @@ async function main() {
         title: 'فن اللامبالاة',
         author: 'مارك مانسون',
         description: 'دليلك المخالف للمألوف لعش حياة ممتازة وبسيطة بدون ضغوطات وهمية.',
-        category: 'SELF_DEVELOPMENT', // تطوير ذات
+        category: 'SELF_DEVELOPMENT',
         condition: 'ACCEPTABLE',
         ownerId: user.id,
       },
     ],
   })
 
-  console.log('تم تعبئة الرفوف وتوزيع التصنيفات بنجاح! 📚✨')
+  console.log('تم تعبئة الرفوف بنجاح! 📚✨')
 }
 
 main()

@@ -1,6 +1,7 @@
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  output          = "../generated/prisma-full"
 }
 
 datasource db {
@@ -9,98 +10,304 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   name           String
-  email          String   @unique
+  email          String    @unique
   hashedPassword String?
-  city           String   //
-  bio            String?  // نبذة عن ذوق المستخدم بالقراءة
-  points         Int      @default(0)
+  language       String    @default("ar")
+  country        String?
+  city           String
+  neighborhood   String?
+  bio            String?
 
-  // العلاقات
+  // رصيد النقاط المتاحة والمحجوزة
+  points         Int       @default(0)
+  reservedPoints Int       @default(0)
+
+  // 🛡️ الأمان والإشراف (حظر الحساب من قبل الإدارة)
+  isBanned       Boolean   @default(false)
+  banReason      String?
+
+  // الكتب والمفضلة
   books          Book[]    @relation("UserBooks")
-  favoriteBooks  Book[]    @relation("UserFavorites") 
+  favoriteBooks  Book[]    @relation("UserFavorites")
+
+  // طلبات المبادلة
   initiatedSwaps Swap[]    @relation("RequesterSwaps")
   receivedSwaps  Swap[]    @relation("ReceiverSwaps")
+
+  // الرسائل
   messages       Message[]
 
+  // سجل النقاط
+  pointTransactions PointTransaction[]
+
+  // تقييمات التبادل
+  reviewsGiven   Review[]  @relation("ReviewAuthor")
+  reviewsReceived Review[] @relation("ReviewTarget")
+
+  // علاقات المتابعة
+  followedBy     User[]    @relation("UserFollows")
+  following      User[]    @relation("UserFollows")
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // 🔔 علاقات الإشعارات
+  notificationsReceived  Notification[] @relation("NotificationRecipient")
+  notificationsTriggered Notification[] @relation("NotificationActor")
+
+  passwordResetToken PasswordResetToken?
+
+  // 🚩 علاقات البلاغات
+  reportsSent     Report[] @relation("ReportsSent")
+  reportsReceived Report[] @relation("ReportsReceived")
+
+  firstBookRewardClaimed Boolean  @default(false) // هل استلم نقطة أول كتاب؟
+  firstSwapRewardClaimed Boolean  @default(false) // هل استلم نقطة أول تبادل؟
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model RateLimitBucket {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
   updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
 }
 
 model Book {
-  id          String       @id @default(uuid())
-  title       String
-  author      String
-  description String?
-  coverUrl    String?
-  points      Int          @default(1) // نقاط الكتاب
-  category    BookCategory @default(NOVELS) // التصنيف من القائمة حصراً
-  condition   String?      // حالة الكتاب: جديد، ممتاز، مقبول
-  isAvailable Boolean      @default(true) // بيصير false أول ما يتم التبادل
+  id               String       @id @default(uuid())
+  title            String
+  author           String
+  description      String?
+  coverUrl         String?
 
-  ownerId String
-  owner   User   @relation("UserBooks", fields: [ownerId], references: [id], onDelete: Cascade)
+  // قيمة الكتاب بالنقاط
+  points           Int          @default(1)
 
-  // المستخدمين اللي حطوا هالكتاب بالمفضلة
-  favoritedBy User[] @relation("UserFavorites")
+  category         BookCategory @default(NOVELS)
+  condition        String?
 
-  // العلاقات مع عمليات التبادل
-  swapsAsRequested Swap[] @relation("RequestedBook")
-  swapsAsOffered   Swap[] @relation("OfferedBook")
+  // التوفر والحجز
+  isAvailable      Boolean      @default(true)
+  isDeleted        Boolean      @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ownerId          String
+  owner            User         @relation("UserBooks", fields: [ownerId], references: [id], onDelete: Cascade)
+  language         String       @default("ar")
+
+  // المستخدمون الذين أضافوا الكتاب إلى المفضلة
+  favoritedBy      User[]       @relation("UserFavorites")
+
+  // طلبات المبادلة
+  swapsAsRequested Swap[]       @relation("RequestedBook")
+  swapsAsOffered   Swap[]       @relation("OfferedBook")
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([isAvailable])
 }
 
 model Swap {
-  id String @id @default(uuid())
+  id                String             @id @default(uuid())
 
-  // اللي طلب التبديل
-  requesterId String
-  requester   User   @relation("RequesterSwaps", fields: [requesterId], references: [id])
+  // نوع العملية: مبادلة مباشرة أو بالنقاط
+  type              SwapType           @default(DIRECT)
+
+  // المستخدم الذي أنشأ الطلب
+  requesterId       String
+  requester         User               @relation("RequesterSwaps", fields: [requesterId], references: [id], onDelete: Restrict)
 
   // صاحب الكتاب المطلوب
-  receiverId String
-  receiver   User   @relation("ReceiverSwaps", fields: [receiverId], references: [id])
+  receiverId        String
+  receiver          User               @relation("ReceiverSwaps", fields: [receiverId], references: [id], onDelete: Restrict)
 
   // الكتاب المطلوب
-  requestedBookId String
-  requestedBook   Book   @relation("RequestedBook", fields: [requestedBookId], references: [id])
+  requestedBookId   String
+  requestedBook     Book               @relation("RequestedBook", fields: [requestedBookId], references: [id], onDelete: Restrict)
 
-  // الكتاب المعروض كبديل
-  offeredBookId String?
-  offeredBook   Book?   @relation("OfferedBook", fields: [offeredBookId], references: [id])
+  // الكتاب الذي يقدمه صاحب الطلب في المبادلة المباشرة
+  offeredBookId     String?
+  offeredBook       Book?              @relation("OfferedBook", fields: [offeredBookId], references: [id], onDelete: Restrict)
 
-  status SwapStatus @default(PENDING)
+  // الكتب المتاحة التي يعرضها صاحب الطلب ليختار الطرف الآخر واحداً منها
+  offeredBookIds    String[]           @default([])
 
-  messages Message[] // الشات الخاص بهالعملية بس
+  // قيمة الكتاب بالنقاط وقت إنشاء الطلب
+  pointsCost        Int                @default(0)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // حالة الطلب
+  status            SwapStatus         @default(PENDING)
+  cancelReason      String?
+  hiddenForRequester Boolean           @default(false)
+  hiddenForReceiver  Boolean           @default(false)
+
+  // تأكيد تسليم الكتاب وتأكيد استلامه
+  deliveryConfirmed Boolean            @default(false)
+  receiptConfirmed  Boolean            @default(false)
+
+  // 📸 صور إثبات التسليم والاستلام لفض النزاعات
+  deliveryProofUrl  String?
+  receiptProofUrl   String?
+
+  completedAt       DateTime?
+
+  // المحادثة المرتبطة بالطلب
+  messages          Message[]
+
+  // التقييمات المتبادلة بعد اكتمال الطلب
+  reviews           Review[]
+
+  // سجل معاملات النقاط والمرتبطة بالطلب
+  pointTransactions PointTransaction[]
+
+  // بلاغات مرتبطة بالطلب
+  reports           Report[]
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([requesterId, status])
+  @@index([receiverId, status])
+  @@index([requestedBookId, status])
+  @@index([offeredBookId])
+  @@index([type, status])
 }
 
 model Message {
-  id      String @id @default(uuid())
-  content String
+  id        String   @id @default(uuid())
+  content   String
 
-  senderId String
-  sender   User   @relation(fields: [senderId], references: [id])
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  swapId String
-  swap   Swap   @relation(fields: [swapId], references: [id], onDelete: Cascade)
+  swapId    String
+  swap      Swap     @relation(fields: [swapId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+
+  @@index([swapId, createdAt])
+  @@index([senderId])
+}
+
+model PointTransaction {
+  id             String               @id @default(uuid())
+
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  amount         Int
+  type           PointTransactionType
+
+  swapId         String?
+  swap           Swap?                @relation(fields: [swapId], references: [id], onDelete: Restrict)
+
+  idempotencyKey String               @unique
+  description    String?
+
+  createdAt      DateTime             @default(now())
+
+  @@index([userId, createdAt])
+  @@index([swapId])
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  swapId      String
+  swap        Swap     @relation(fields: [swapId], references: [id], onDelete: Cascade)
+  reviewerId  String
+  reviewer    User     @relation("ReviewAuthor", fields: [reviewerId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User     @relation("ReviewTarget", fields: [recipientId], references: [id], onDelete: Cascade)
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@unique([swapId, reviewerId])
+  @@index([recipientId, createdAt])
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  reason      String       // سبب البلاغ المختار
+  details     String?      // تفاصيل إضافية من المستخدم
+  status      ReportStatus @default(PENDING)
+
+  reporterId  String
+  reporter    User         @relation("ReportsSent", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  reportedId  String
+  reported    User         @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
+
+  swapId      String?
+  swap        Swap?        @relation(fields: [swapId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([reportedId])
+  @@index([status])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+
+  userId    String           // المستلم (المتابع)
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  actorId   String?          // صاحب الفعل (الذي أضاف الكتاب)
+  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+}
+
+enum SwapType {
+  DIRECT // كتاب مقابل كتاب
+  POINTS // الحصول على كتاب بالنقاط
 }
 
 enum SwapStatus {
-  PENDING   // بانتظار الرد
-  ACCEPTED  // تمت الموافقة
-  REJECTED  // مرفوض
-  COMPLETED // اكتمل التبادل بنجاح
+  PENDING               // بانتظار موافقة صاحب الكتاب
+  ACCEPTED              // تمت الموافقة
+  REJECTED              // رُفض الطلب
+  AWAITING_DELIVERY     // بانتظار تسليم الكتاب
+  AWAITING_CONFIRMATION // تم تسجيل التسليم وبانتظار تأكيد الاستلام
+  COMPLETED             // اكتملت العملية
+  CANCELLED             // أُلغي الطلب
+  DISPUTED              // توجد مشكلة في التسليم
 }
 
-// قائمة التصنيفات المحددة بدقة
+enum PointTransactionType {
+  EARNED     // نقاط مكتسبة
+  SPENT      // نقاط مصروفة
+  RESERVED   // نقاط محجوزة
+  RELEASED   // نقاط محررة بعد إلغاء الحجز
+  REFUNDED   // نقاط مسترجعة
+  ADJUSTMENT // تعديل إداري
+}
+
 enum BookCategory {
   NOVELS           // روايات أدبية
   HISTORY          // تاريخ
@@ -110,5 +317,18 @@ enum BookCategory {
   RELIGION         // علوم دينية
   POETRY           // شعر وأدب
   ARTS             // فنون وعمارة
+  OTHER
 }
 
+enum NotificationType {
+  NEW_BOOK_FROM_FOLLOWED
+  SWAP_REQUEST
+  SWAP_ACCEPTED
+  REVIEW_RECEIVED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
