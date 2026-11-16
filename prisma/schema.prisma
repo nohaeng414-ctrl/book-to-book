@@ -188,7 +188,6 @@ model Swap {
   @@index([offeredBookId])
   @@index([type, status])
 }
-
 model Message {
   id        String   @id @default(uuid())
   content   String

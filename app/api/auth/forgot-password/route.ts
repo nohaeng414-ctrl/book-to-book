@@ -20,13 +20,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "البريد الإلكتروني غير صالح" }, { status: 400 });
     }
     const email = (payload as { email?: unknown }).email;
-    if (typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (
+      typeof email !== "string" ||
+      email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       return NextResponse.json({ error: "البريد الإلكتروني غير صالح" }, { status: 400 });
     }
 
-    const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL;
-    if (!baseUrl || !process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
-      return NextResponse.json({ error: "خدمة استعادة الحساب غير مهيأة بعد" }, { status: 503 });
+    const baseUrl =
+      process.env.APP_BASE_URL ??
+      process.env.NEXTAUTH_URL ??
+      (process.env.NODE_ENV === "development" ? "http://localhost:3000" : undefined);
+
+    const isEmailConfigured = Boolean(
+      baseUrl && process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL
+    );
+
+    if (!isEmailConfigured && process.env.NODE_ENV !== "development") {
+      return NextResponse.json(
+        { error: "خدمة استعادة الحساب غير مهيأة بعد" },
+        { status: 503 }
+      );
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -36,7 +51,10 @@ export async function POST(request: Request) {
     ]);
     if (!ipLimit.allowed || !emailLimit.allowed) {
       const retryAfter = Math.max(ipLimit.retryAfterSeconds, emailLimit.retryAfterSeconds);
-      return NextResponse.json(genericResponse, { status: 200, headers: { "Retry-After": String(retryAfter) } });
+      return NextResponse.json(genericResponse, {
+        status: 200,
+        headers: { "Retry-After": String(retryAfter) },
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -44,7 +62,7 @@ export async function POST(request: Request) {
       select: { id: true, email: true },
     });
 
-    if (user) {
+    if (user && baseUrl) {
       const token = randomBytes(32).toString("base64url");
       const tokenHash = createHash("sha256").update(token).digest("hex");
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
@@ -55,23 +73,44 @@ export async function POST(request: Request) {
         update: { tokenHash, expiresAt, createdAt: new Date() },
       });
 
+      const resetUrl = new URL("/reset-password", baseUrl);
+      resetUrl.searchParams.set("token", token);
+
+      // في بيئة التطوير بدون إعداد Resend، نطبع الرابط في التيرمينال لتسهيل الاختبار
+      if (!isEmailConfigured) {
+        console.log("🔑 [DEV] رابط استعادة كلمة المرور:", resetUrl.toString());
+        return NextResponse.json(genericResponse);
+      }
+
       try {
-        const resetUrl = new URL("/reset-password", baseUrl);
-        resetUrl.searchParams.set("token", token);
         await sendEmail({
           to: user.email,
           subject: "تغيير كلمة المرور | كتاب بكتاب",
           text: `استخدم الرابط التالي لتغيير كلمة مرورك خلال 30 دقيقة: ${resetUrl.toString()}\nإذا لم تطلب ذلك، فتجاهل هذه الرسالة.`,
-          html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8"><h1>تغيير كلمة المرور</h1><p>اضغط الرابط لتغيير كلمة مرورك. ينتهي الرابط خلال 30 دقيقة ويمكن استخدامه مرة واحدة.</p><p><a href="${resetUrl.toString()}">تغيير كلمة المرور</a></p><p>إذا لم تطلب ذلك، فتجاهل هذه الرسالة.</p></div>`,
+          html: `
+            <div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; line-height: 1.8; color: #0F172A; max-width: 520px; margin: auto; padding: 24px; border: 1px solid #E2E8F0; border-radius: 16px;">
+              <h2 style="margin-top: 0; color: #0F172A;">تغيير كلمة المرور</h2>
+              <p>مرحباً بك في <strong>كتاب بكتاب</strong>، اضغط على الزر أدناه لتعيين كلمة مرور جديدة لحسابك. ينتهي الرابط خلال 30 دقيقة ويمكن استخدامه مرة واحدة فقط.</p>
+              <p style="margin: 24px 0;">
+                <a href="${resetUrl.toString()}" style="display: inline-block; background-color: #0D9488; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: bold;">
+                  تغيير كلمة المرور
+                </a>
+              </p>
+              <p style="font-size: 13px; color: #64748B;">إذا لم تطلب تغيير كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.</p>
+            </div>
+          `,
         });
-      } catch (error) {
+      } catch {
         await prisma.passwordResetToken.deleteMany({ where: { userId: user.id, tokenHash } });
-        console.error("Password reset email delivery failed.", error);
+        console.error("Password reset email delivery failed.");
       }
     }
 
     return NextResponse.json(genericResponse);
   } catch {
-    return NextResponse.json({ error: "تعذر إرسال الطلب حالياً. حاول لاحقاً." }, { status: 503 });
+    return NextResponse.json(
+      { error: "تعذر إرسال الطلب حالياً. حاول لاحقاً." },
+      { status: 503 }
+    );
   }
 }
