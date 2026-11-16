@@ -65,6 +65,18 @@ model User {
 
   firstBookRewardClaimed Boolean  @default(false) // هل استلم نقطة أول كتاب؟
   firstSwapRewardClaimed Boolean  @default(false) // هل استلم نقطة أول تبادل؟
+  emailVerified           DateTime?
+  emailVerificationToken EmailVerificationToken?
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PasswordResetToken {
@@ -76,6 +88,8 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+
+  
 }
 
 model RateLimitBucket {
@@ -188,6 +202,7 @@ model Swap {
   @@index([offeredBookId])
   @@index([type, status])
 }
+
 model Message {
   id        String   @id @default(uuid())
   content   String

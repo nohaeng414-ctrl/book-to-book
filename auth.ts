@@ -1,9 +1,17 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import authConfig from "@/auth.config";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
+
+class TooManyRequestsError extends CredentialsSignin {
+  code = "TOO_MANY_REQUESTS";
+}
+
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "EMAIL_NOT_VERIFIED";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -20,14 +28,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           typeof credentials?.password !== "string" ||
           credentials.email.length > 254 ||
           Buffer.byteLength(credentials.password, "utf8") > 72
-        ) return null;
+        ) {
+          return null;
+        }
 
         const email = credentials.email.trim().toLowerCase();
         const [ipLimit, emailLimit] = await Promise.all([
           consumeRateLimit("login-ip", getClientIp(request), 20, 15 * 60 * 1000),
           consumeRateLimit("login-email", email, 8, 15 * 60 * 1000),
         ]);
-        if (!ipLimit.allowed || !emailLimit.allowed) return null;
+
+        if (!ipLimit.allowed || !emailLimit.allowed) {
+          throw new TooManyRequestsError();
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -38,6 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             language: true,
             hashedPassword: true,
             isBanned: true,
+            emailVerified: true,
           },
         });
 
@@ -52,6 +66,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // 🛑 منع تسجيل الدخول فوراً إذا كان المستخدم محظوراً
         if (user.isBanned) {
           throw new Error("ACCOUNT_BANNED");
+        }
+
+        // 📧 منع تسجيل الدخول قبل تأكيد البريد الإلكتروني
+        if (!user.emailVerified) {
+          throw new EmailNotVerifiedError();
         }
 
         return {
