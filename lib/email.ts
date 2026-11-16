@@ -1,26 +1,38 @@
-type EmailMessage = {
+import nodemailer from "nodemailer";
+
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+}: {
   to: string;
   subject: string;
-  html: string;
   text: string;
-};
+  html: string;
+}) {
+  const user = process.env.GMAIL_USER?.trim();
+  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
 
-export async function sendEmail(message: EmailMessage) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !from) throw new Error("Resend email configuration is missing.");
+  if (!user || !pass) {
+    throw new Error("بيانات GMAIL_USER أو GMAIL_APP_PASSWORD ناقصة في ملف البيئة");
+  }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user,
+      pass,
     },
-    body: JSON.stringify({ from, ...message }),
-    cache: "no-store",
   });
 
-  if (!response.ok) {
-    throw new Error(`Resend rejected the email (${response.status}).`);
-  }
+  await transporter.sendMail({
+    from: `"تطبيق كتاب بكتاب" <${user}>`,
+    to,
+    subject,
+    text,
+    html,
+  });
 }
