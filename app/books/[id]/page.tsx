@@ -1,531 +1,378 @@
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { notFound, redirect } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
 import BackButton from "@/components/BackButton";
-import ReportModal from "@/components/ReportModal";
-import ConfirmReceiptModal from "@/components/ConfirmReceiptModal";
-import SwapReviewModal from "@/components/SwapReviewModal";
-import SwapChat from "@/components/SwapChat";
-import DisputeForm from "@/components/DisputeForm";
-import CancelAcceptedSwapButton from "@/components/CancelAcceptedSwapButton";
-import PendingSubmitButton from "@/components/PendingSubmitButton";
-import {
-  acceptSwapWithOfferAction,
-  updateSwapStatusAction,
-} from "@/app/actions/swapWorkflow";
-import {
-  Coins,
-  CheckCircle2,
-  MapPin,
-  Clock,
-  BookOpen,
-  XCircle,
-} from "lucide-react";
+import FavoriteButton from "@/components/FavoriteButton";
+import ShareButton from "@/components/ShareButton";
+import UserAvatar from "@/components/UserAvatar";
+import { prisma } from "@/lib/prisma";
+import {  Star, BookmarkCheck, ShieldCheck, FileText } from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
+import {
+  ArrowLeftRight,
+  BookOpen,
+  Globe,
+  MapPin,
+  Sparkles,
+  UserCheck,
+  UserPlus,
+} from "lucide-react";
+import { revalidatePath } from "next/cache";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 
-const CONDITION_LABELS: Record<string, string> = {
+const categoryLabels: Record<string, string> = {
+  NOVELS: "روايات",
+  HISTORY: "تاريخ",
+  SELF_DEVELOPMENT: "تطوير الذات",
+  PHILOSOPHY: "فلسفة وعلم نفس",
+  SCIENCE: "علوم ومعارف",
+  RELIGION: "علوم دينية",
+  POETRY: "شعر وأدب",
+  ARTS: "فنون وعمارة",
+  OTHER: "أخرى",
+};
+
+const conditionLabels: Record<string, string> = {
   LIKE_NEW: "شبه جديد",
-  GOOD: "جيد جداً",
+  GOOD: "جيد",
   ACCEPTABLE: "مقبول",
 };
 
-function getConditionLabel(condition: string | null | undefined): string {
-  if (!condition) return "";
-  return CONDITION_LABELS[condition] || condition;
+function formatPoints(points: number) {
+  if (points === 1) return "نقطة واحدة";
+  if (points === 2) return "نقطتان";
+  if (points >= 3 && points <= 10) return `${toArabicNumerals(points)} نقاط`;
+  return `${toArabicNumerals(points)} نقطة`;
 }
 
-const STATUS_STEP: Record<string, number> = {
-  PENDING: 1,
-  ACCEPTED: 2,
-  AWAITING_DELIVERY: 2,
-  AWAITING_CONFIRMATION: 3,
-  COMPLETED: 4,
-  REJECTED: 0,
-  CANCELLED: 0,
-  DISPUTED: 0,
-};
+function formatLanguage(lang?: string | null) {
+  if (lang === "ar" || lang === "ARABIC") return "العربية";
+  if (lang === "en" || lang === "ENGLISH") return "الإنجليزية";
+  return lang || "غير محددة";
+}
 
-export default async function SwapDetailPage({
+export async function generateMetadata({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
-  const [{ id }, query] = await Promise.all([params, searchParams]);
-  const session = await auth();
-  if (!session?.user?.email) redirect("/login");
+  const { id } = await params;
+  if (!id) return { title: "الكتاب غير موجود | كتاب بكتاب" };
 
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, name: true },
+  const book = await prisma.book.findFirst({
+    where: { id, isDeleted: false },
+    select: { title: true, author: true },
   });
 
-  if (!currentUser) redirect("/login");
+  return {
+    title: book ? `${book.title} | كتاب بكتاب` : "الكتاب غير موجود | كتاب بكتاب",
+    description: book
+      ? `تفاصيل كتاب ${book.title}${book.author ? ` للمؤلف ${book.author}` : ""} على منصة كتاب بكتاب.`
+      : "تعذر العثور على هذا الكتاب.",
+  };
+}
 
-  const swap = await prisma.swap.findUnique({
-    where: { id },
-    include: {
-      requester: {
-        select: { id: true, name: true, city: true, neighborhood: true },
-      },
-      receiver: {
-        select: { id: true, name: true, city: true, neighborhood: true },
-      },
-      requestedBook: {
-        select: {
-          id: true,
-          title: true,
-          author: true,
-          coverUrl: true,
-          condition: true,
-          points: true,
-        },
-      },
-      offeredBook: {
-        select: {
-          id: true,
-          title: true,
-          author: true,
-          coverUrl: true,
-          condition: true,
-          points: true,
-        },
-      },
-      reviews: { select: { reviewerId: true } },
-      messages: {
-        include: { sender: { select: { id: true, name: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 30,
+export default async function BookDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const [{ id }, session] = await Promise.all([params, auth()]);
+  if (!id) notFound();
+
+  const book = await prisma.book.findFirst({
+    where: { id, isDeleted: false },
+    select: {
+      id: true,
+      title: true,
+      author: true,
+      description: true,
+      points: true,
+      category: true,
+      condition: true,
+      language: true,
+      isAvailable: true,
+      createdAt: true,
+      updatedAt: true,
+      ownerId: true,
+      owner: {
+        select: { id: true, name: true, city: true, country: true },
       },
     },
   });
 
-  if (!swap) notFound();
+  if (!book) notFound();
 
-  const isRequester = swap.requesterId === currentUser.id;
-  const isReceiver = swap.receiverId === currentUser.id;
+  const currentUser = session?.user?.email
+    ? await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+    : null;
 
-  if (!isRequester && !isReceiver) redirect("/swaps/history");
+  const isOwner = currentUser?.id === book.ownerId;
+  const isFavorite = currentUser
+    ? (await prisma.book.count({
+        where: { id: book.id, favoritedBy: { some: { id: currentUser.id } } },
+      })) > 0
+    : false;
 
-  const otherParty = isRequester ? swap.receiver : swap.requester;
-  const hasReviewed = swap.reviews.some((r) => r.reviewerId === currentUser.id);
-
-  const candidateIds = swap.offeredBookIds.length
-    ? swap.offeredBookIds
-    : swap.offeredBookId
-    ? [swap.offeredBookId]
-    : [];
-
-  const candidateBooks =
-    swap.type === "DIRECT" && isReceiver && swap.status === "PENDING"
-      ? await prisma.book.findMany({
+  // التحقق مما إذا كان المستخدم يتابع صاحب الكتاب (يدعم أشهر تسميات جداول المتابعة في Prisma)
+  let isFollowing = false;
+  if (currentUser && !isOwner) {
+    try {
+      const prismaAny = prisma as Record<string, any>;
+      if (prismaAny.follow) {
+        const count = await prismaAny.follow.count({
+          where: { followerId: currentUser.id, followingId: book.ownerId },
+        });
+        isFollowing = count > 0;
+      } else {
+        const userWithFollow = await prismaAny.user.findFirst({
           where: {
-            id: { in: candidateIds },
-            ownerId: swap.requesterId,
-            isAvailable: true,
-            isDeleted: false,
+            id: currentUser.id,
+            following: { some: { id: book.ownerId } },
           },
-          select: {
-            id: true,
-            title: true,
-            author: true,
-            points: true,
-            condition: true,
-            coverUrl: true,
-          },
-          orderBy: { createdAt: "desc" },
-        })
-      : [];
-
-  const swapId = swap.id;
-  const currentStep = STATUS_STEP[swap.status] ?? 1;
-
-  async function handleAccept() {
-    "use server";
-    await updateSwapStatusAction(swapId, "ACCEPT");
+          select: { id: true },
+        });
+        isFollowing = Boolean(userWithFollow);
+      }
+    } catch {
+      isFollowing = false;
+    }
   }
 
-  async function handleReject() {
+  // دالة تنفيذ المتابعة أو إلغائها مباشرة عند الضغط على الزر
+  async function handleFollowToggle() {
     "use server";
-    await updateSwapStatusAction(swapId, "REJECT", "اعتذار عن الطلب");
+    const activeSession = await auth();
+    if (!activeSession?.user?.email) {
+      redirect("/login");
+    }
+
+    const viewer = await prisma.user.findUnique({
+      where: { email: activeSession.user.email },
+      select: { id: true },
+    });
+
+    if (!viewer || viewer.id === book?.ownerId) return;
+
+    const prismaAny = prisma as Record<string, any>;
+    try {
+      if (prismaAny.follow) {
+        const existing = await prismaAny.follow.findFirst({
+          where: { followerId: viewer.id, followingId: book!.ownerId },
+        });
+        if (existing) {
+          await prismaAny.follow.delete({ where: { id: existing.id } });
+        } else {
+          await prismaAny.follow.create({
+            data: { followerId: viewer.id, followingId: book!.ownerId },
+          });
+        }
+      } else {
+        const existing = await prismaAny.user.findFirst({
+          where: {
+            id: viewer.id,
+            following: { some: { id: book!.ownerId } },
+          },
+        });
+        await prismaAny.user.update({
+          where: { id: viewer.id },
+          data: {
+            following: existing
+              ? { disconnect: { id: book!.ownerId } }
+              : { connect: { id: book!.ownerId } },
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Follow toggle error:", error);
+    }
+
+    revalidatePath(`/books/${id}`);
   }
 
-  const steps = [
-    { id: 1, title: "إرسال الطلب" },
-    { id: 2, title: "موافقة الطرفين" },
-    { id: 3, title: "الاستلام والتسليم" },
-    { id: 4, title: "اكتمال الطلب" },
-  ];
-
-  const receiverLocation = [swap.receiver.neighborhood, swap.receiver.city]
-    .filter(Boolean)
-    .join("، ");
-  const requesterLocation = [swap.requester.neighborhood, swap.requester.city]
+  const location = [book.owner.city, book.owner.country]
     .filter(Boolean)
     .join("، ");
 
   return (
     <main
       dir="rtl"
-      className="mx-auto w-full max-w-2xl space-y-3.5 px-3 sm:px-4 pb-28 text-[#0F172A]"
+      className="mx-auto w-full max-w-3xl space-y-4 px-3 pt-0 pb-28 text-slate-900 sm:px-4"
     >
-      {/* 🧭 الهيدر القياسي */}
-      <header className="relative flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
-        <div className="shrink-0 z-10">
-          <BackButton />
-        </div>
-
-        <h1 className="absolute inset-x-0 text-center text-sm sm:text-base font-black text-slate-900 pointer-events-none">
-          تفاصيل الطلب
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white/95 px-3 backdrop-blur-sm">
+        <BackButton />
+        <h1 className="pointer-events-none absolute inset-x-12 truncate text-center text-sm font-black sm:text-base">
+          تفاصيل الكتاب
         </h1>
-
-        <div className="shrink-0 z-10">
-          <ReportModal
-            reportedUserId={otherParty.id}
-            reportedUserName={otherParty.name}
-            swapId={swap.id}
+        <div className="flex items-center gap-2">
+          <ShareButton title={book.title} />
+          <FavoriteButton
+            bookId={book.id}
+            isFavorite={isFavorite}
+            isLoggedIn={Boolean(session?.user)}
           />
         </div>
       </header>
 
-      {query.error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700"
-        >
-          {query.error}
-        </p>
-      )}
+      <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs">
+        <div className="grid gap-6 p-4 sm:grid-cols-[210px_1fr] sm:gap-7 sm:p-6">
+          <div className="mx-auto w-40 sm:w-full">
+            <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+              <BookOpen
+                aria-hidden="true"
+                className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 text-slate-300"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/books/${encodeURIComponent(book.id)}/cover?v=${book.updatedAt.getTime()}`}
+                alt={`غلاف كتاب ${book.title}`}
+                className="relative z-10 h-full w-full object-cover"
+              />
+            </div>
+          </div>
 
-      {/* خط سير الطلب */}
-      {currentStep > 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-          <div className="grid grid-cols-4 gap-1">
-            {steps.map((s) => {
-              const isDone = currentStep >= s.id;
-              const isCurrent = currentStep === s.id;
-              return (
-                <div key={s.id} className="flex flex-col items-center text-center">
-                  <div
-                    className={`mb-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black transition ${
-                      isDone
-                        ? "bg-teal-600 text-white"
-                        : "bg-slate-100 text-slate-400"
-                    } ${isCurrent ? "ring-4 ring-teal-100" : ""}`}
-                  >
-                    {isDone ? "✓" : toArabicNumerals(s.id)}
-                  </div>
-                  <span
-                    className={`text-[10px] sm:text-[11px] font-bold ${
-                      isDone ? "text-slate-800" : "text-slate-400"
+          <div className="flex min-w-0 flex-col">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                {categoryLabels[book.category] ?? "أخرى"}
+              </span>
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
+                {formatPoints(book.points)}
+              </span>
+            </div>
+
+            <h2 className="mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+              {book.title}
+            </h2>
+
+            {book.author && (
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                {book.author}
+              </p>
+            )}
+
+      {/* شريط مواصفات احترافي بدون خط فاصل */}
+<div className="mt-5 grid grid-cols-2 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/90 via-white to-slate-50/50 p-2.5 shadow-2xs">
+  
+  {/* العنصر الأول: حالة الكتاب */}
+  <div className="flex items-center gap-3.5 px-3 py-2">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100 shadow-2xs">
+      <Star className="h-5 w-5 " />
+    </div>
+    <div className="min-w-0 text-right">
+      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        حالة الكتاب
+      </span>
+      <span className="block truncate text-xs font-black text-slate-900 sm:text-sm">
+        {conditionLabels[book.condition ?? ""] ?? "غير محددة"}
+      </span>
+    </div>
+  </div>
+
+  {/* العنصر الثاني: اللغة */}
+  <div className="flex items-center gap-3.5 px-3 py-2">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 ring-1 ring-sky-100 shadow-2xs">
+      <Globe className="h-5 w-5" />
+    </div>
+    <div className="min-w-0 text-right">
+      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        لغة الكتاب
+      </span>
+      <span className="block truncate text-xs font-black text-slate-900 sm:text-sm">
+        {formatLanguage(book.language)}
+      </span>
+    </div>
+  </div>
+
+</div>
+
+            {/* بطاقة صاحب الكتاب مع زر متابعة تفاعلي */}
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-100 p-3 transition hover:border-slate-200">
+              <Link
+                href={`/users/${book.owner.id}`}
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
+                <UserAvatar userId={book.owner.id} name={book.owner.name} size="md" />
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-black text-slate-800 hover:text-teal-700">
+                    {book.owner.name || "قارئ"}
+                  </span>
+                  {location && (
+                    <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-teal-700" />
+                      <span className="truncate">{location}</span>
+                    </span>
+                  )}
+                </div>
+              </Link>
+
+              {!isOwner && (
+                <form action={handleFollowToggle}>
+                  <button
+                    type="submit"
+                    className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition active:scale-95 ${
+                      isFollowing
+                        ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        : "bg-teal-50 text-teal-800 hover:bg-teal-100"
                     }`}
                   >
-                    {s.title}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ) : (
-        <section className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-xs font-bold text-slate-600">
-          <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
-          <span>
-            {swap.status === "DISPUTED"
-              ? "هذا الطلب قيد المراجعة الإدارية."
-              : swap.status === "REJECTED"
-              ? "تم الاعتذار عن هذا الطلب."
-              : "تم إلغاء هذا الطلب."}
-          </span>
-        </section>
-      )}
-
-      {/* بطاقة الكتاب والمقابل ببساطة تامة */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs space-y-3">
-        {/* الكتاب المطلوب + اسم صاحبه أسفله مباشرة */}
-        <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-          <Link href={`/books/${swap.requestedBook.id}`} className="shrink-0">
-            {swap.requestedBook.coverUrl ? (
-              <div className="relative h-16 w-12 overflow-hidden rounded-lg border border-slate-200">
-                <Image
-                  src={swap.requestedBook.coverUrl}
-                  alt={swap.requestedBook.title}
-                  fill
-                  sizes="48px"
-                  className="object-cover"
-                />
-              </div>
-            ) : (
-              <div className="flex h-16 w-12 items-center justify-center rounded-lg bg-slate-200 text-slate-400">
-                <BookOpen className="h-4 w-4" />
-              </div>
-            )}
-          </Link>
-
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <Link
-              href={`/books/${swap.requestedBook.id}`}
-              className="block text-xs sm:text-sm font-black text-slate-900 hover:text-teal-700 truncate"
-            >
-              {swap.requestedBook.title}
-            </Link>
-
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-              <Link
-                href={`/users/${swap.receiver.id}`}
-                className="font-bold text-slate-700 hover:text-teal-700 hover:underline"
-              >
-                {swap.receiver.name}
-              </Link>
-              {receiverLocation && (
-                <span className="flex items-center gap-0.5 text-slate-400">
-                  <MapPin className="h-3 w-3 text-teal-600" />
-                  {receiverLocation}
-                </span>
-              )}
-            </div>
-
-            {getConditionLabel(swap.requestedBook.condition) && (
-              <span className="inline-block text-[10px] font-bold text-teal-700">
-                {getConditionLabel(swap.requestedBook.condition)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* أسفله مباشرة: إما عدد النقاط أو الكتاب الآخر */}
-        {swap.type === "POINTS" ? (
-          <div className="flex items-center justify-between rounded-xl bg-teal-50/70 border border-teal-100 px-3.5 py-2.5">
-            <div className="flex items-center gap-2 text-xs font-black text-teal-900">
-              <Coins className="h-4 w-4 text-teal-600 shrink-0" />
-              <span>{toArabicNumerals(swap.pointsCost)} نقاط</span>
-            </div>
-            <Link
-              href={`/users/${swap.requester.id}`}
-              className="text-[11px] font-bold text-slate-600 hover:text-teal-700 hover:underline"
-            >
-              {swap.requester.name}
-            </Link>
-          </div>
-        ) : swap.offeredBook ? (
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-            <Link href={`/books/${swap.offeredBook.id}`} className="shrink-0">
-              {swap.offeredBook.coverUrl ? (
-                <div className="relative h-16 w-12 overflow-hidden rounded-lg border border-slate-200">
-                  <Image
-                    src={swap.offeredBook.coverUrl}
-                    alt={swap.offeredBook.title}
-                    fill
-                    sizes="48px"
-                    className="object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex h-16 w-12 items-center justify-center rounded-lg bg-slate-200 text-slate-400">
-                  <BookOpen className="h-4 w-4" />
-                </div>
-              )}
-            </Link>
-
-            <div className="min-w-0 flex-1 space-y-0.5">
-              <Link
-                href={`/books/${swap.offeredBook.id}`}
-                className="block text-xs sm:text-sm font-black text-slate-900 hover:text-teal-700 truncate"
-              >
-                {swap.offeredBook.title}
-              </Link>
-
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                <Link
-                  href={`/users/${swap.requester.id}`}
-                  className="font-bold text-slate-700 hover:text-teal-700 hover:underline"
-                >
-                  {swap.requester.name}
-                </Link>
-                {requesterLocation && (
-                  <span className="flex items-center gap-0.5 text-slate-400">
-                    <MapPin className="h-3 w-3 text-teal-600" />
-                    {requesterLocation}
-                  </span>
-                )}
-              </div>
-
-              {getConditionLabel(swap.offeredBook.condition) && (
-                <span className="inline-block text-[10px] font-bold text-blue-700">
-                  {getConditionLabel(swap.offeredBook.condition)}
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-amber-300 bg-amber-50/40 p-3 text-xs font-bold text-amber-800">
-            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-            <span>بانتظار اختيار الكتاب من</span>
-            <Link
-              href={`/users/${swap.requester.id}`}
-              className="font-black underline hover:text-teal-700"
-            >
-              {swap.requester.name}
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* شريط الإجراءات حسب الحالة */}
-      {swap.status === "PENDING" && isReceiver && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 space-y-2.5">
-          <p className="text-xs font-bold text-amber-900">
-            {swap.type === "DIRECT"
-              ? "اختر الكتاب الذي ترغب به من القائمة، ثم اقبل الطلب:"
-              : "تحدث مع القارئ بالأسفل، ثم اختر قرارك:"}
-          </p>
-          <div className="space-y-2.5">
-            {swap.type === "DIRECT" ? (
-              candidateBooks.length > 0 ? (
-                <form action={acceptSwapWithOfferAction} className="space-y-2.5">
-                  <input type="hidden" name="swapId" value={swap.id} />
-                  <fieldset className="grid gap-2 sm:grid-cols-2">
-                    <legend className="sr-only">اختر كتاباً</legend>
-                    {candidateBooks.map((book, index) => (
-                      <label
-                        key={book.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5 transition has-[:checked]:border-teal-600 has-[:checked]:bg-teal-50"
-                      >
-                        <input
-                          type="radio"
-                          name="offeredBookId"
-                          value={book.id}
-                          required
-                          defaultChecked={index === 0}
-                          className="accent-teal-700"
-                        />
-                        {book.coverUrl ? (
-                          <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg">
-                            <Image
-                              src={book.coverUrl}
-                              alt={book.title}
-                              fill
-                              sizes="40px"
-                              className="object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-14 w-10 shrink-0 rounded-lg bg-slate-100" />
-                        )}
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-black text-slate-800">
-                            {book.title}
-                          </span>
-                          <span className="block truncate text-[11px] text-slate-500">
-                            {book.author || ""}
-                          </span>
-                          <span className="mt-0.5 block text-[10px] font-bold text-teal-700">
-                            {toArabicNumerals(book.points)} نقاط
-                            {getConditionLabel(book.condition)
-                              ? ` · ${getConditionLabel(book.condition)}`
-                              : ""}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                  </fieldset>
-                  <PendingSubmitButton
-                    pendingText="جارٍ القبول..."
-                    className="w-full rounded-xl bg-teal-600 py-2.5 text-xs font-black text-white transition hover:bg-teal-700"
-                  >
-                    قبول الطلب بالكتاب المحدد
-                  </PendingSubmitButton>
+                    {isFollowing ? (
+                      <>
+                        <UserCheck className="h-3.5 w-3.5 text-teal-700" />
+                        <span>متابَع</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-3.5 w-3.5" />
+                        <span>متابعة</span>
+                      </>
+                    )}
+                  </button>
                 </form>
-              ) : (
-                <p className="rounded-xl border border-amber-200 bg-white p-3 text-xs font-semibold text-amber-800">
-                  لم تعد الكتب المعروضة متاحة حالياً.
-                </p>
-              )
-            ) : (
-              <form action={handleAccept}>
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-teal-600 py-2.5 text-xs font-black text-white hover:bg-teal-700 transition cursor-pointer"
+              )}
+            </div>
+
+            <div className="mt-auto pt-5">
+              {isOwner ? (
+                <Link
+                  href={`/my-books/edit/${book.id}`}
+                  className="flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white transition hover:bg-slate-800"
                 >
-                  قبول الطلب
-                </button>
-              </form>
-            )}
-            <form action={handleReject}>
-              <button
-                type="submit"
-                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-              >
-                اعتذار
-              </button>
-            </form>
+                  تعديل بيانات الكتاب
+                </Link>
+              ) : book.isAvailable ? (
+               <Link
+  href={session?.user ? `/swap/request?bookId=${book.id}` : "/login"}
+  className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-4 py-3 text-sm font-black text-white transition hover:bg-brand-primary-hover active:scale-[0.98]"
+>
+  طلب الكتاب
+</Link>
+
+                 
+              ) : (
+                <p className="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-600">
+                  هذا الكتاب غير متاح للتبادل حالياً.
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      {(swap.status === "ACCEPTED" ||
-        swap.status === "AWAITING_DELIVERY" ||
-        swap.status === "AWAITING_CONFIRMATION") && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-slate-800">حالة الاستلام والتسليم:</span>
-            <span className="text-teal-600">
-              {swap.deliveryConfirmed && swap.receiptConfirmed
-                ? "أكّد الطرفان"
-                : swap.deliveryConfirmed || swap.receiptConfirmed
-                ? "أكّد أحد الطرفين"
-                : "بانتظار التسليم"}
-            </span>
-          </div>
+        {book.description && (
+          <section className="border-t border-slate-100 px-4 py-5 sm:px-6">
+            <h3 className="text-sm font-black text-slate-900">نبذة عن الكتاب</h3>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+              {book.description}
+            </p>
+          </section>
+        )}
+      </article>
 
-          {((isReceiver &&
-            (swap.status === "ACCEPTED" || swap.status === "AWAITING_DELIVERY")) ||
-            (isRequester && swap.status === "AWAITING_CONFIRMATION")) && (
-            <ConfirmReceiptModal swapId={swap.id} isReceiver={isReceiver} />
-          )}
-
-          {(swap.status === "ACCEPTED" || swap.status === "AWAITING_DELIVERY") &&
-            !swap.deliveryConfirmed &&
-            !swap.receiptConfirmed && (
-              <CancelAcceptedSwapButton swapId={swap.id} />
-            )}
-
-          <DisputeForm swapId={swap.id} />
-        </div>
-      )}
-
-      {swap.status === "COMPLETED" && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 rounded-2xl bg-teal-50 p-3 text-xs font-bold text-teal-800 border border-teal-200">
-            <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-teal-600" />
-            <span>اكتمل الطلب بنجاح!</span>
-          </div>
-
-          <SwapReviewModal
-            swapId={swap.id}
-            recipientId={otherParty.id}
-            recipientName={otherParty.name}
-            hasReviewed={hasReviewed}
-          />
-        </div>
-      )}
-
-      {/* 💬 محادثة الطلب */}
-      {swap.status !== "CANCELLED" && swap.status !== "REJECTED" && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-          <h2 className="mb-3 text-sm font-black text-slate-800">
-            محادثة الطلب
-          </h2>
-          <SwapChat
-            swapId={swap.id}
-            initialMessages={[...swap.messages].reverse()}
-            currentUserId={currentUser.id}
-          />
-        </section>
-      )}
+      <p className="px-1 text-center text-xs text-slate-400">
+        أُضيف في {new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium" }).format(book.createdAt)}
+      </p>
     </main>
   );
 }

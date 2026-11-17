@@ -5,6 +5,7 @@ import { useState } from "react";
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { toggleFollow } from "@/app/actions/follow";
 import { toArabicNumerals } from "@/lib/formatting";
+import { useRouter } from "next/navigation";
 
 interface FollowButtonProps {
   targetUserId: string;
@@ -12,6 +13,7 @@ interface FollowButtonProps {
   initialFollowersCount?: number;
   followingCount?: number;
   isSelf?: boolean;
+  currentUserId?: string | null; // 👈 أضفنا معرف المستخدم الحالي للتحقق من تسجيل الدخول
 }
 
 export default function FollowButton({
@@ -20,7 +22,9 @@ export default function FollowButton({
   initialFollowersCount,
   followingCount,
   isSelf = false,
+  currentUserId,
 }: FollowButtonProps) {
+  const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followersCount, setFollowersCount] = useState(initialFollowersCount ?? 0);
   const [loading, setLoading] = useState(false);
@@ -31,6 +35,12 @@ export default function FollowButton({
   const handleToggle = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // 🔒 إذا لم يكن المستخدم مسجلاً دخوله، حوله إلى صفحة تسجيل الدخول فوراً
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
 
     if (loading) return;
     setLoading(true);

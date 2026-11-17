@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Flag, X, AlertTriangle } from "lucide-react";
 import { reportUserAction } from "@/app/actions/swapWorkflow";
 
@@ -8,16 +9,28 @@ export default function ReportModal({
   reportedUserId,
   reportedUserName,
   swapId,
+  currentUserId, // 👈 1. أضفنا معرف المستخدم الحالي هنا
 }: {
   reportedUserId: string;
   reportedUserName: string;
   swapId?: string;
+  currentUserId?: string | null; // 👈 2. تحديد نوع الخاصية
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState("إزعاج أو سلوك غير لائق");
   const [details, setDetails] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const handleOpenModal = () => {
+    // 🔒 3. إذا لم يكن المستخدم مسجلاً دخوله، حوله إلى صفحة تسجيل الدخول فوراً
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+    setIsOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +55,7 @@ export default function ReportModal({
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpenModal} // 👈 4. ربط الزر بالدالة الجديدة للتحقق من التسجيل
         title="إبلاغ عن الحساب"
         className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 backdrop-blur-xs transition active:scale-95 cursor-pointer"
       >

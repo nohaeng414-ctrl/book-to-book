@@ -7,11 +7,17 @@ export default withAuth((req) => {
   const isLoggedIn = !!req.auth;
   const { nextUrl } = req;
 
+  // السماح بعرض صفحات الكتب للزوار ومحركات البحث
+  if (nextUrl.pathname.startsWith("/books/")) {
+    return;
+  }
+
   const isProtectedPage =
     nextUrl.pathname.startsWith("/add-book") ||
     nextUrl.pathname.startsWith("/my-books") ||
     nextUrl.pathname.startsWith("/profile") ||
-    nextUrl.pathname.startsWith("/requests");
+    nextUrl.pathname.startsWith("/requests") ||
+    nextUrl.pathname.startsWith("/swaps");
 
   if (isProtectedPage && !isLoggedIn) {
     return Response.redirect(new URL("/login", nextUrl));

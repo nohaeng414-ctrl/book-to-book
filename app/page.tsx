@@ -486,7 +486,7 @@ export default async function Home({
                         {book.title}
                       </h3>
                       <p className="mt-0.5 truncate text-[11px] text-[#64748B]">
-                        {book.author || "غير محدد"}
+                        {book.author || ""}
                       </p>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
@@ -553,7 +553,7 @@ export default async function Home({
                         {book.title}
                       </h3>
                       <p className="mt-0.5 truncate text-[11px] text-[#64748B]">
-                        {book.author || "غير محدد"}
+                        {book.author || ""}
                       </p>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
@@ -664,7 +664,7 @@ export default async function Home({
                                 {book.title}
                               </h3>
                               <p className="mt-0.5 truncate text-[11px] text-[#64748B]">
-                                {book.author || "غير محدد"}
+                                {book.author || ""}
                               </p>
                             </div>
                             <div className="mt-2 flex items-center justify-between">

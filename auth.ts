@@ -42,7 +42,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new TooManyRequestsError();
         }
 
-        const user = await prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
           where: { email },
           select: {
             id: true,
@@ -55,24 +55,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
-        if (!user?.hashedPassword) return null;
+        if (!user) {
+          console.log("❌ خطأ: المستخدم غير مسجل بهذا البريد الإلكتروني");
+          return null;
+        }
+
+        if (!user.hashedPassword) {
+          console.log("❌ خطأ: الحساب ليس له كلمة مرور (ممكن مسجل بطريقة أخرى)");
+          return null;
+        }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.hashedPassword
         );
-        if (!isPasswordValid) return null;
+        
+        if (!isPasswordValid) {
+          console.log("❌ خطأ: كلمة المرور المدخلة غير صحيحة!");
+          return null;
+        }
 
         // 🛑 منع تسجيل الدخول فوراً إذا كان المستخدم محظوراً
         if (user.isBanned) {
+          console.log("❌ خطأ: هذا الحساب محظور من قبل الإدارة!");
           throw new Error("ACCOUNT_BANNED");
         }
 
-        // 📧 منع تسجيل الدخول قبل تأكيد البريد الإلكتروني
-        if (!user.emailVerified) {
-          throw new EmailNotVerifiedError();
-        }
+   
 
+        console.log("✅ نجاح: تم التحقق من بيانات المستخدم وتسجيل دخوله بنجاح:", user.email);
         return {
           id: user.id,
           name: user.name,
