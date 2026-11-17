@@ -106,7 +106,7 @@ export default async function AdminReportsPage({
           <div>
             <h1 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-rose-600" />
-              <span>إدارة البلاغات ومراجعة النزاعات</span>
+              <span>إدارة البلاغات</span>
             </h1>
             <p className="text-xs text-slate-500">
               مراجعة محادثات الطلبات وصور الإثبات والفصل في النزاعات

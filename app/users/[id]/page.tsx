@@ -115,6 +115,7 @@ export default async function UserProfilePage({
       <div className="relative rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] p-6 text-white shadow-md border border-slate-700/50">
         {/* زر الرجوع في اليمين */}
         <div className="absolute top-4 right-4 z-20">
+          
           <BackButton />
         </div>
 

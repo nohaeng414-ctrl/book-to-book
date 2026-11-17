@@ -8,6 +8,7 @@ import {  Star, BookmarkCheck, ShieldCheck, FileText } from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
 import {
   ArrowLeftRight,
+  ArrowRight,
   BookOpen,
   Globe,
   MapPin,
@@ -202,7 +203,13 @@ export default async function BookDetailPage({
       className="mx-auto w-full max-w-3xl space-y-4 px-3 pt-0 pb-28 text-slate-900 sm:px-4"
     >
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white/95 px-3 backdrop-blur-sm">
-        <BackButton />
+         <Link
+          href="/profile"
+          title="رجوع"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+        >
+          <ArrowRight className="h-5 w-5" />
+        </Link>
         <h1 className="pointer-events-none absolute inset-x-12 truncate text-center text-sm font-black sm:text-base">
           تفاصيل الكتاب
         </h1>

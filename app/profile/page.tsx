@@ -1,7 +1,5 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdminEmail } from "@/lib/admin";
-import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -95,17 +93,6 @@ export default async function ProfilePage() {
       {/* هيدر البروفايل */}
       <div className="relative rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] p-6 text-white shadow-md border border-slate-700/50">
       
-      {/* زر لوحة الإدارة في اليمين (يظهر لحساب المشرف فقط) */}
-        {isAdminEmail(user.email) && (
-          <Link
-            href="/admin/reports"
-            title="لوحة الإدارة"
-            className="absolute top-4 right-4 z-20 flex items-center gap-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 px-3 py-2 text-xs font-black text-amber-300 transition-all backdrop-blur-md border border-amber-400/30 active:scale-95"
-          >
-            <ShieldAlert className="h-4 w-4" />
-            <span>الإدارة</span>
-          </Link>
-        )}
         {/* زر الإعدادات في اليسار */}
         <Link
           href="/settings"
