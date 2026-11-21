@@ -36,30 +36,34 @@ export async function adminCancelSwapAction(swapId: string) {
       data: { status: "CANCELLED" },
     });
 
-    // 2. إرجاع النقاط المحجوزة لصاحب الطلب إذا كان التبادل بالنقاط
+    // 2. فك الحجز عن النقاط المحجوزة لصاحب الطلب (دون زيادة رصيد points)
     if (swap.pointsCost > 0) {
       const requester = await tx.user.findUnique({
         where: { id: swap.requesterId },
-        select: { points: true, reservedPoints: true },
+        select: { reservedPoints: true },
       });
 
-      if (requester) {
+      if (requester && requester.reservedPoints > 0) {
+        const amountToRelease = Math.min(
+          requester.reservedPoints,
+          swap.pointsCost
+        );
+
         await tx.user.update({
           where: { id: swap.requesterId },
           data: {
-            points: requester.points + swap.pointsCost,
-            reservedPoints: Math.max(0, requester.reservedPoints - swap.pointsCost),
+            reservedPoints: { decrement: amountToRelease },
           },
         });
 
         await tx.pointTransaction.create({
           data: {
             userId: swap.requesterId,
-            amount: swap.pointsCost,
+            amount: amountToRelease,
             type: "REFUNDED",
             swapId: swap.id,
             idempotencyKey: `admin-cancel-refund-${swap.id}`,
-            description: "إرجاع إداري للنقاط بعد إلغاء الطلب من قبل الإدارة",
+            description: "فك حجز النقاط إدارياً بعد إلغاء الطلب من قبل الإدارة",
           },
         });
       }

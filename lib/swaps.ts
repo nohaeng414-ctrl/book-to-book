@@ -699,7 +699,7 @@ export async function transitionSwap(
           }
         }
 
-        // تحرير النقاط المحجوزة (سواء لطلب نقاط كامل أو فرق نقاط في تبادل مباشر مقبول)
+       // تحرير النقاط المحجوزة (سواء لطلب نقاط كامل أو فرق نقاط في تبادل مباشر مقبول)
         const hasReservedPoints =
           swap.pointsCost > 0 &&
           (swap.type === SwapType.POINTS || canCancelAfterAcceptance);
@@ -709,18 +709,20 @@ export async function transitionSwap(
             where: { id: swap.requesterId },
             data: { reservedPoints: { decrement: swap.pointsCost } },
           });
-          if (action === "cancel") {
-            await tx.pointTransaction.create({
-              data: {
-                userId: swap.requesterId,
-                amount: swap.pointsCost,
-                type: PointTransactionType.RELEASED,
-                swapId: swap.id,
-                idempotencyKey: `swap:${swap.id}:released`,
-                description: "تحرير نقاط بعد إلغاء طلب التبادل",
-              },
-            });
-          }
+
+          await tx.pointTransaction.create({
+            data: {
+              userId: swap.requesterId,
+              amount: swap.pointsCost,
+              type: PointTransactionType.RELEASED,
+              swapId: swap.id,
+              idempotencyKey: `swap:${swap.id}:released`,
+              description:
+                action === "reject"
+                  ? "تحرير نقاط بعد رفض طلب التبادل"
+                  : "تحرير نقاط بعد إلغاء طلب التبادل",
+            },
+          });
         }
         return { ...swap, status: nextStatus };
       }
