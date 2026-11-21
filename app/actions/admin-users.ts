@@ -124,6 +124,7 @@ export async function sendAdminNotificationAction(
   });
 
   revalidatePath("/admin/users");
+  revalidatePath("/profile/notifications");
   return { success: true };
 }
 
@@ -150,13 +151,14 @@ export async function broadcastAdminNotificationAction(
       userId: u.id,
       actorId: dbAdmin?.id ?? null,
       type: "SWAP_REQUEST",
-      title: `📢 إعلان من إدارة كتاب بكتاب: ${title}`,
+      title: ` ${title}`,
       body,
       link: "/",
     })),
   });
 
   revalidatePath("/admin");
+  revalidatePath("/profile/notifications");
   return { success: true, count: allUsers.length };
 }
 
@@ -222,6 +224,7 @@ export async function adminDeleteBookAction(bookId: string, userId: string) {
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
+  revalidatePath("/profile/notifications");
   revalidatePath("/");
   return { success: true };
 }

@@ -45,7 +45,50 @@ export default async function SettingsPage({
 
   if (!dbUser) redirect("/login");
 
-  // ... دالة saveLocation تبقى كما هي تماماً ...
+  async function saveLocation(formData: FormData) {
+    "use server";
+    const current = await auth();
+    if (!current?.user?.email) redirect("/login");
+
+    const country = String(formData.get("country") ?? "");
+    const language = String(formData.get("language") ?? "");
+    const city = String(formData.get("city") ?? "").trim();
+    const neighborhood = String(formData.get("neighborhood") ?? "").trim();
+
+    if (
+      !countriesList.includes(country) ||
+      !["ar", "en"].includes(language) ||
+      city.length < 2 ||
+      city.length > 80 ||
+      neighborhood.length > 100
+    ) {
+      redirect(
+        `/settings?locationError=${encodeURIComponent(
+          "تحقق من اللغة والدولة والمدينة والحي وحاول مجدداً."
+        )}`
+      );
+    }
+
+    await prisma.user.update({
+      where: { email: current.user.email },
+      data: { language, country, city, neighborhood: neighborhood || null },
+    });
+
+    const cookieStore = await cookies();
+    cookieStore.set("book-language", language, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+
+    revalidatePath("/profile");
+    revalidatePath("/settings");
+    revalidatePath("/");
+    revalidatePath("/requests");
+    redirect("/settings?locationSaved=1");
+  }
 
   return (
     <main dir="rtl" className="mx-auto w-full max-w-3xl space-y-6 px-3 sm:px-4 py-6 text-[#0F172A]">
@@ -109,6 +152,17 @@ export default async function SettingsPage({
           </Link>
 
           <Link
+            href="/profile/country-language"
+            className="flex items-center justify-between px-4 py-3.5 transition hover:bg-slate-50 text-slate-700 font-bold"
+          >
+            <div className="flex items-center gap-3">
+<Globe className="h-4 w-4 text-slate-500" />
+             اللغة والموقع
+            </div>
+            <ChevronLeft className="h-4 w-4 text-slate-400" />
+          </Link>
+
+          <Link
             href="/profile/security"
             className="flex items-center justify-between px-4 py-3.5 transition hover:bg-slate-50 text-slate-700 font-bold"
           >
@@ -143,7 +197,22 @@ export default async function SettingsPage({
         </div>
       </div>
 
-      {/* باقي قسم اللغة والموقع وزر تسجيل الخروج تبقى كما هي ... */}
+ 
+      {/* زر تسجيل الخروج */}
+      <form
+        action={async () => {
+          "use server";
+          await signOut({ redirectTo: "/login" });
+        }}
+      >
+        <PendingSubmitButton
+          pendingText="جارٍ تسجيل الخروج..."
+          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50/60 py-3 text-xs font-bold text-red-600 transition hover:bg-red-100"
+        >
+          <LogOut className="h-4 w-4" />
+          تسجيل الخروج
+        </PendingSubmitButton>
+      </form>
     </main>
   );
 }

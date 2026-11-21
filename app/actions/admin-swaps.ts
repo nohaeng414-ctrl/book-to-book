@@ -94,5 +94,6 @@ export async function adminCancelSwapAction(swapId: string) {
 
   revalidatePath("/admin/swaps");
   revalidatePath(`/swaps/${swapId}`);
+  revalidatePath("/profile/notifications");
   return { success: true };
 }

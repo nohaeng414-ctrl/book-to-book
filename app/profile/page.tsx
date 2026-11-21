@@ -224,7 +224,7 @@ export default async function ProfilePage() {
             user.bio
           ) : (
             <span className="text-slate-400 italic">
-              لم تقم بإضافة نبذة بعد.
+             لم تقم بإضافة اهتماماتك بعد.
             </span>
           )}
         </p>

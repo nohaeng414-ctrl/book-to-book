@@ -219,11 +219,12 @@ export default async function SwapDetailPage({
 
   const remainingLabel = formatRemainingDuration(remainingMs);
 
-  // يُسمح بالإلغاء بعد القبول فقط قبل أن يؤكد أي طرف التسليم
+  // يُسمح لمقدّم الطلب بإلغائه قبل الموافقة، وللطرفين بعد القبول قبل تأكيد التسليم
   const canCancelSwap =
-    (swap.status === "ACCEPTED" || swap.status === "AWAITING_DELIVERY") &&
-    !swap.deliveryConfirmed &&
-    !swap.receiptConfirmed;
+    (swap.status === "PENDING" && !isReceiver) ||
+    ((swap.status === "ACCEPTED" || swap.status === "AWAITING_DELIVERY") &&
+      !swap.deliveryConfirmed &&
+      !swap.receiptConfirmed);
 
   // زر رفع الشكوى متاح أثناء مرحلة الاستلام والتسليم ولمدة 7 أيام بعد الاكتمال
   const completedReferenceDate = swap.completedAt ?? swap.updatedAt;

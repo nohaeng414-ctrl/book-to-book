@@ -1,40 +1,112 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { SwapError, transitionSwap } from "@/lib/swaps";
 import RequestTabs from "@/components/RequestTabs";
-import { SwapStatus } from "@/generated/prisma-full";
+import { SwapStatus, SwapType } from "@/generated/prisma-full";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import ReviewForm from "@/components/ReviewForm";
 import UserAvatar from "@/components/UserAvatar";
 import Link from "next/link";
-import PendingSubmitButton from "@/components/PendingSubmitButton";
+import {
+  BookOpen,
+  ArrowRightLeft,
+  Coins,
+  ChevronLeft,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Inbox,
+  Send,
+  Clock,
+} from "lucide-react";
 
-import { BookOpen, Coins, MapPin, ArrowLeftRight } from "lucide-react";
-import { toArabicNumerals } from "@/lib/formatting";
-
-const statusLabels: Record<SwapStatus, string> = {
-  PENDING: "بانتظار الموافقة",
-  ACCEPTED: "تمت الموافقة",
-  REJECTED: "مرفوض",
-  AWAITING_DELIVERY: "بانتظار التسليم",
-  AWAITING_CONFIRMATION: "بانتظار تأكيد الاستلام",
-  COMPLETED: "مكتمل",
-  CANCELLED: "ملغى",
-  DISPUTED: "قيد المراجعة",
+const statusMeta: Record<
+  SwapStatus,
+  {
+    label: string;
+    badgeClass: string;
+    dotClass: string;
+    pulse?: boolean;
+  }
+> = {
+  PENDING: {
+    label: "بانتظار الموافقة",
+    badgeClass: "border-amber-200/80 bg-amber-50 text-amber-800",
+    dotClass: "bg-amber-500",
+    pulse: true,
+  },
+  ACCEPTED: {
+    label: "تمت الموافقة",
+    badgeClass: "border-teal-200/80 bg-teal-50 text-teal-800",
+    dotClass: "bg-teal-500",
+  },
+  AWAITING_DELIVERY: {
+    label: "بانتظار التسليم",
+    badgeClass: "border-sky-200/80 bg-sky-50 text-sky-800",
+    dotClass: "bg-sky-500",
+    pulse: true,
+  },
+  AWAITING_CONFIRMATION: {
+    label: "بانتظار تأكيد الاستلام",
+    badgeClass: "border-indigo-200/80 bg-indigo-50 text-indigo-800",
+    dotClass: "bg-indigo-500",
+    pulse: true,
+  },
+  COMPLETED: {
+    label: "مكتمل",
+    badgeClass: "border-emerald-200/80 bg-emerald-50 text-emerald-800",
+    dotClass: "bg-emerald-500",
+  },
+  REJECTED: {
+    label: "مرفوض",
+    badgeClass: "border-slate-200 bg-slate-100 text-slate-600",
+    dotClass: "bg-slate-400",
+  },
+  CANCELLED: {
+    label: "ملغى",
+    badgeClass: "border-slate-200 bg-slate-100 text-slate-600",
+    dotClass: "bg-slate-400",
+  },
+  DISPUTED: {
+    label: "قيد المراجعة",
+    badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
+    dotClass: "bg-rose-500",
+    pulse: true,
+  },
 };
 
-const statusBadgeStyles: Record<SwapStatus, string> = {
-  PENDING: "border-amber-200 bg-amber-50 text-amber-800",
-  ACCEPTED: "border-blue-200 bg-blue-50 text-blue-800",
-  AWAITING_DELIVERY: "border-blue-200 bg-blue-50 text-blue-800",
-  AWAITING_CONFIRMATION: "border-indigo-200 bg-indigo-50 text-indigo-800",
-  COMPLETED: "border-teal-200 bg-teal-50 text-teal-800",
-  REJECTED: "border-slate-200 bg-slate-100 text-slate-600",
-  CANCELLED: "border-slate-200 bg-slate-100 text-slate-600",
-  DISPUTED: "border-rose-200 bg-rose-50 text-rose-800",
-};
+const dateFormatter = new Intl.DateTimeFormat("ar-SA", {
+  month: "short",
+  day: "numeric",
+  timeZone: "Asia/Riyadh",
+});
+
+function formatRelativeTime(date: Date): string {
+  const diffSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diffSeconds < 60) return "الآن";
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) {
+    if (diffMinutes === 1) return "منذ دقيقة";
+    if (diffMinutes === 2) return "منذ دقيقتين";
+    if (diffMinutes <= 10) return `منذ ${diffMinutes} دقائق`;
+    return `منذ ${diffMinutes} دقيقة`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    if (diffHours === 1) return "منذ ساعة";
+    if (diffHours === 2) return "منذ ساعتين";
+    if (diffHours <= 10) return `منذ ${diffHours} ساعات`;
+    return `منذ ${diffHours} ساعة`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "أمس";
+  if (diffDays === 2) return "منذ يومين";
+  if (diffDays <= 7) return `منذ ${diffDays} أيام`;
+
+  return dateFormatter.format(date);
+}
 
 export default async function RequestsPage({
   searchParams,
@@ -53,11 +125,6 @@ export default async function RequestsPage({
   if (!currentUserId) redirect("/login");
 
   const params = await searchParams;
-  const savedLanguage =
-    (await cookies()).get("book-language")?.value ??
-    (session.user as { language?: string }).language;
-  const locale = savedLanguage === "en" ? "en-US" : "ar-SA";
-
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     select: {
@@ -67,49 +134,33 @@ export default async function RequestsPage({
         where: { hiddenForRequester: false },
         select: {
           id: true,
-          requesterId: true,
-          receiverId: true,
-          status: true,
           type: true,
           pointsCost: true,
-          offeredBookId: true,
-          offeredBookIds: true,
-          cancelReason: true,
-          createdAt: true,
-          reviews: { where: { reviewerId: currentUserId }, select: { id: true } },
+          status: true,
+          updatedAt: true,
           requestedBook: {
-            select: { id: true, title: true, points: true },
+            select: { id: true, title: true, author: true },
           },
-          offeredBook: {
-            select: { id: true, title: true, points: true },
-          },
-          receiver: { select: { name: true, city: true } },
+          receiverId: true,
+          receiver: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { updatedAt: "desc" },
       },
       receivedSwaps: {
         where: { hiddenForReceiver: false },
         select: {
           id: true,
-          requesterId: true,
-          receiverId: true,
-          status: true,
           type: true,
           pointsCost: true,
-          offeredBookId: true,
-          offeredBookIds: true,
-          cancelReason: true,
-          createdAt: true,
-          reviews: { where: { reviewerId: currentUserId }, select: { id: true } },
+          status: true,
+          updatedAt: true,
           requestedBook: {
-            select: { id: true, title: true, points: true },
+            select: { id: true, title: true, author: true },
           },
-          offeredBook: {
-            select: { id: true, title: true, points: true },
-          },
-          requester: { select: { name: true, city: true } },
+          requesterId: true,
+          requester: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { updatedAt: "desc" },
       },
     },
   });
@@ -138,11 +189,12 @@ export default async function RequestsPage({
       select: { requesterId: true, receiverId: true },
     });
 
-    if (!swap)
+    if (!swap) {
       redirect(
         "/requests?error=" +
           encodeURIComponent("لا يمكن حذف هذا الطلب من القائمة.")
       );
+    }
 
     await prisma.swap.updateMany({
       where: {
@@ -157,331 +209,138 @@ export default async function RequestsPage({
     revalidatePath("/requests");
   }
 
-  async function updateSwap(formData: FormData) {
-    "use server";
-    const currentSession = await auth();
-    const email = currentSession?.user?.email;
-    if (!email) redirect("/login");
-    const currentUser = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (!currentUser) redirect("/login");
-
-    const id = String(formData.get("swapId") || "");
-    const action = String(formData.get("action") || "");
-    const offeredBookId = String(formData.get("offeredBookId") || "");
-    const tab = formData.get("tab") === "outgoing" ? "outgoing" : "incoming";
-
-    if (!["accept", "reject", "cancel", "delivery", "receipt"].includes(action)) {
-      redirect(`/requests?tab=${tab}&error=إجراء+غير+صالح`);
-    }
-
-    try {
-      await transitionSwap(
-        currentUser.id,
-        id,
-        action as "accept" | "reject" | "cancel" | "delivery" | "receipt",
-        offeredBookId || undefined
-      );
-    } catch (error) {
-      if (!(error instanceof SwapError)) throw error;
-      const message =
-        error instanceof SwapError ? error.message : "تعذر تحديث الطلب حالياً.";
-      redirect(`/requests?tab=${tab}&error=${encodeURIComponent(message)}`);
-    }
-
-    revalidatePath("/requests");
-    revalidatePath("/my-books");
-    revalidatePath("/profile");
-    revalidatePath("/");
-  }
-
   const isOngoingSwap = (status: SwapStatus) =>
     status !== SwapStatus.CANCELLED &&
     status !== SwapStatus.REJECTED &&
     status !== SwapStatus.COMPLETED;
 
-  const card = (
+  const renderCard = (
     swap: {
       id: string;
-      createdAt: Date;
-      status: SwapStatus;
-      type: string;
+      type: SwapType;
       pointsCost: number;
-      offeredBookIds: string[];
-      cancelReason: string | null;
-      reviews: { id: string }[];
+      status: SwapStatus;
+      updatedAt: Date;
       counterpartyId: string;
+      counterpartyName: string;
       requestedBook: {
         id: string;
         title: string;
-        points: number;
+        author: string;
       };
-      offeredBook: {
-        id: string;
-        title: string;
-        points: number;
-      } | null;
-      offeredBookId: string | null;
-      counterpartyName: string;
-      counterpartyCity: string;
     },
     incoming: boolean
   ) => {
+    const meta = statusMeta[swap.status];
+    const statusLabel =
+      swap.status === SwapStatus.PENDING
+        ? incoming
+          ? "بانتظار موافقتك"
+          : "بانتظار الرد"
+        : meta.label;
+
+    const canRemove =
+      swap.status === SwapStatus.CANCELLED ||
+      swap.status === SwapStatus.REJECTED;
+
     return (
       <article
         key={swap.id}
-        className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs space-y-3"
+        className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xs transition hover:border-slate-300 hover:shadow-xs"
       >
-        {/* 1. السطر العلوي: الطرف الآخر + موقعه + شارة الحالة ونوع الطلب */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <Link
-            href={`/users/${swap.counterpartyId}`}
-            className="flex items-center gap-2.5 min-w-0 group"
-          >
+        {/* رأس البطاقة: الطرف الآخر + حالة الطلب */}
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <UserAvatar
               userId={swap.counterpartyId}
               name={swap.counterpartyName}
               size="sm"
             />
             <div className="min-w-0">
-              <span className="block text-xs sm:text-sm font-black text-slate-900 group-hover:text-teal-700 truncate">
+              <span className="block truncate text-xs sm:text-sm font-black text-slate-900">
                 {swap.counterpartyName}
               </span>
-              <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                {swap.counterpartyCity && (
-                  <>
-                    <MapPin className="h-3 w-3 text-teal-600 shrink-0" />
-                    <span className="truncate">{swap.counterpartyCity}</span>
-                    <span>·</span>
-                  </>
-                )}
-                <time dateTime={swap.createdAt.toISOString()}>
-                  {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
-                    swap.createdAt
-                  )}
-                </time>
+              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                <Clock className="h-2.5 w-2.5 shrink-0" />
+                {formatRelativeTime(swap.updatedAt)}
               </span>
             </div>
-          </Link>
-
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            <span
-              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
-                statusBadgeStyles[swap.status] ||
-                "border-slate-200 bg-slate-100 text-slate-700"
-              }`}
-            >
-              {statusLabels[swap.status]}
-            </span>
-
-            <span
-              className={`inline-flex items-center gap-1 text-[10px] font-bold ${
-                swap.type === "POINTS" ? "text-teal-700" : "text-blue-700"
-              }`}
-            >
-              {swap.type === "POINTS" ? (
-                <>
-                  <Coins className="h-3 w-3" />
-                  <span>طلب بالنقاط</span>
-                </>
-              ) : (
-                <>
-                  <ArrowLeftRight className="h-3 w-3" />
-                  <span>كتاب بكتاب</span>
-                </>
-              )}
-            </span>
           </div>
+
+          <span
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black ${meta.badgeClass}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${meta.dotClass} ${
+                meta.pulse ? "animate-pulse" : ""
+              }`}
+            />
+            {statusLabel}
+          </span>
         </div>
 
-        {/* 2. الكتاب المطلوب */}
-        <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5">
-          <Link
-            href={`/books/${swap.requestedBook.id}`}
-            className="relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-200 text-slate-400"
-          >
-            <BookOpen className="h-4 w-4 absolute z-0" />
+        {/* جسم البطاقة: تفاصيل الكتاب ونوع التبادل */}
+        <Link
+          href={`/swaps/${swap.id}`}
+          className="group flex items-center gap-3.5 p-4 transition hover:bg-slate-50/70"
+        >
+          <div className="relative flex h-20 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 text-slate-400 shadow-2xs">
+            <BookOpen className="absolute z-0 h-4 w-4" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/books/${swap.requestedBook.id}/cover`}
               alt={swap.requestedBook.title}
               loading="lazy"
-              className="relative z-10 h-full w-full object-cover"
+              className="relative z-10 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
-          </Link>
-
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-400 block">
-              {incoming
-                ? "كتابك المطلوب"
-                : `الكتاب المطلوب`}
-            </span>
-            <Link
-              href={`/books/${swap.requestedBook.id}`}
-              className="block text-xs sm:text-sm font-black text-slate-900 hover:text-teal-700 truncate"
-            >
-              {swap.requestedBook.title}
-            </Link>
           </div>
-        </div>
 
-        {/* 3. المقابل: النقاط أو الكتاب الآخر */}
-        {swap.type === "POINTS" ? (
-          <div className="flex items-center justify-between rounded-xl bg-teal-50/70 border border-teal-100 px-3 py-2">
-            <span className="text-xs font-bold text-teal-800">المقابل:</span>
-            <span className="flex items-center gap-1.5 text-xs font-black text-teal-950">
-              <Coins className="h-4 w-4 text-teal-600 shrink-0" />
-              <span>{toArabicNumerals(swap.pointsCost)} نقاط</span>
-            </span>
-          </div>
-        ) : swap.offeredBook ? (
-          <div className="flex items-center gap-3 rounded-xl bg-blue-50/40 border border-blue-100 p-2.5">
-            <Link
-              href={`/books/${swap.offeredBook.id}`}
-              className="relative flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-200 text-slate-400"
-            >
-              <BookOpen className="h-3.5 w-3.5 absolute z-0" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/books/${swap.offeredBook.id}/cover`}
-                alt={swap.offeredBook.title}
-                loading="lazy"
-                className="relative z-10 h-full w-full object-cover"
-              />
-            </Link>
-            <div className="min-w-0 flex-1 space-y-0.5">
-              <span className="text-[10px] font-bold text-blue-600 block">
-                {incoming
-                  ? `الكتاب المعروض`
-                  : "كتابك المعروض"}
-              </span>
-              <Link
-                href={`/books/${swap.offeredBook.id}`}
-                className="block text-xs font-black text-slate-900 hover:text-teal-700 truncate"
-              >
-                {swap.offeredBook.title}
-              </Link>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div>
+              <h3 className="truncate text-sm font-black text-slate-900 group-hover:text-teal-700 transition-colors">
+                {swap.requestedBook.title}
+              </h3>
+              {swap.requestedBook.author && (
+                <p className="truncate text-[11px] font-medium text-slate-500 mt-0.5">
+                  {swap.requestedBook.author}
+                </p>
+              )}
             </div>
-          </div>
-        )  : null}
 
-        {swap.cancelReason === "NO_AVAILABLE_OFFER" && (
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-            أُلغي الطلب تلقائياً لأن الكتب المعروضة لم تعد متاحة.
-          </p>
-        )}
-
-        {/* 4. أزرار الإجراءات */}
-        <div className="space-y-2 pt-1">
-          {/* أ) للطلبات الواردة المعلقة: زر قبول الطلب (أخضر) + زر رفض الطلب (أحمر) بجوار بعضهما دائماً */}
-          {incoming && swap.status === SwapStatus.PENDING && (
-            <div className="grid grid-cols-2 gap-2">
-              {swap.type === "POINTS" ? (
-                <form action={updateSwap}>
-                  <input type="hidden" name="swapId" value={swap.id} />
-                  <input type="hidden" name="action" value="accept" />
-                  <input type="hidden" name="tab" value="incoming" />
-                 <PendingSubmitButton
-                                   pendingText="جارٍ القبول..."
-                                   className="w-full rounded-xl bg-teal-600 py-3 text-xs font-black text-white shadow-2xs transition hover:bg-teal-700 cursor-pointer"
-                                 >
-                                   قبول الطلب
-                                 </PendingSubmitButton>
-                </form>
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {swap.type === SwapType.POINTS ? (
+                <span className="inline-flex items-center gap-1 rounded-lg border border-amber-200/70 bg-amber-50/70 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                  <Coins className="h-3 w-3" />
+                  {swap.pointsCost} نقطة
+                </span>
               ) : (
-                <Link
-                  href={`/swaps/${swap.id}`}
-                  className="flex w-full items-center justify-center rounded-xl bg-emerald-600 py-3 text-xs font-black text-white hover:bg-emerald-700 transition"
-                >
-                  قبول الطلب
-                </Link>
+                <span className="inline-flex items-center gap-1 rounded-lg border border-teal-200/70 bg-teal-50/70 px-2 py-0.5 text-[10px] font-black text-teal-700">
+                  <ArrowRightLeft className="h-3 w-3" />
+                  تبادل مباشر
+                </span>
               )}
 
-      <form action={updateSwap}>
-                <input type="hidden" name="swapId" value={swap.id} />
-                <input type="hidden" name="action" value="reject" />
-                <input type="hidden" name="tab" value="incoming" />
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-red-600 py-3 text-xs font-black text-white hover:bg-red-700 transition cursor-pointer shadow-2xs"
-                >
-                  رفض الطلب
-                </button>
-              </form>
+
             </div>
-          )}
+          </div>
 
-          {/* ب) للطلبات الصادرة المعلقة: زر إلغاء الطلب باللون الأحمر */}
-          {!incoming && swap.status === SwapStatus.PENDING && (
-          <form action={updateSwap}>
-              <input type="hidden" name="swapId" value={swap.id} />
-              <input type="hidden" name="action" value="cancel" />
-              <input type="hidden" name="tab" value="outgoing" />
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-red-600 py-3 text-xs font-black text-white hover:bg-red-700 transition cursor-pointer shadow-2xs"
-              >
-                إلغاء الطلب
-              </button>
-            </form>
-          )}
+          <ChevronLeft className="h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-0.5 group-hover:text-teal-600" />
+        </Link>
 
-          {/* ج) تأكيد التسليم / الاستلام */}
-          {incoming && swap.status === SwapStatus.AWAITING_DELIVERY && (
-            <form action={updateSwap}>
-              <input type="hidden" name="swapId" value={swap.id} />
-              <input type="hidden" name="action" value="delivery" />
-              <input type="hidden" name="tab" value="incoming" />
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition cursor-pointer"
-              >
-                تأكيد تسليم الكتاب
-              </button>
-            </form>
-          )}
-
-          {!incoming && swap.status === SwapStatus.AWAITING_CONFIRMATION && (
-            <form action={updateSwap}>
-              <input type="hidden" name="swapId" value={swap.id} />
-              <input type="hidden" name="action" value="receipt" />
-              <input type="hidden" name="tab" value="outgoing" />
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-slate-900 py-3 text-xs font-bold text-white hover:bg-slate-800 transition cursor-pointer"
-              >
-                تأكيد استلام الكتاب
-              </button>
-            </form>
-          )}
-
-          {/* د) زر تفاصيل الطلب لحاله بسطر مستقل */}
-          <Link
-            href={`/swaps/${swap.id}`}
-            className="flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
-          >
-            تفاصيل الطلب
-          </Link>
-
-          {/* هـ) زر حذف الطلب (للملغى أو المرفوض) */}
-          {(swap.status === SwapStatus.CANCELLED ||
-            swap.status === SwapStatus.REJECTED) && (
+        {/* شريط سفلي أنيق لإزالة الطلبات الملغاة أو المرفوضة */}
+        {canRemove && (
+          <div className="flex items-center justify-end border-t border-slate-100 bg-slate-50/60 px-4 py-2">
             <form action={hideCancelledSwap}>
               <input type="hidden" name="swapId" value={swap.id} />
               <button
-                             type="submit"
-                  className="w-full rounded-xl border border-red-200 bg-red-50 py-3 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer"
-                >
-                حذف الطلب
+                type="submit"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-bold text-rose-600 transition hover:bg-rose-50 active:scale-95"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>إزالة من القائمة</span>
               </button>
             </form>
-          )}
-        </div>
-
-        {swap.status === SwapStatus.COMPLETED && swap.reviews.length === 0 && (
-          <ReviewForm swapId={swap.id} tab={incoming ? "incoming" : "outgoing"} />
+          </div>
         )}
       </article>
     );
@@ -498,39 +357,51 @@ export default async function RequestsPage({
   return (
     <main
       dir="rtl"
-      className="mx-auto max-w-2xl space-y-4 px-3 sm:px-4 py-4 pb-28 text-[#0F172A]"
+      className="mx-auto w-full max-w-2xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
+      {/* الهيدر الموحّد */}
+      <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-center rounded-b-2xl border-x border-b border-slate-200 bg-white px-4 shadow-2xs">
+        <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
+          طلبات التبادل
+        </h1>
+      </header>
+
+      {/* رسائل التنبيه والحالة */}
       {params.created && (
-        <p
+        <div
           role="status"
-          className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-700"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 p-3.5 text-center text-xs font-bold text-teal-700"
         >
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
           تم إرسال طلبك بنجاح.
-        </p>
+        </div>
       )}
       {params.reviewed && (
-        <p
+        <div
           role="status"
-          className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-700"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 p-3.5 text-center text-xs font-bold text-teal-700"
         >
-          شكراً لك، تم إرسال التقييم.
-        </p>
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          شكراً لك، تم إرسال التقييم بنجاح.
+        </div>
       )}
       {params.reviewError && (
-        <p
+        <div
           role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-center text-xs font-bold text-rose-700"
         >
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {params.reviewError}
-        </p>
+        </div>
       )}
       {params.error && (
-        <p
+        <div
           role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-center text-xs font-bold text-rose-700"
         >
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {params.error}
-        </p>
+        </div>
       )}
 
       <RequestTabs
@@ -539,40 +410,65 @@ export default async function RequestsPage({
         outgoingCount={activeOutgoingCount}
         incoming={
           user.receivedSwaps.length ? (
-            user.receivedSwaps.map((swap) =>
-              card(
-                {
-                  ...swap,
-                  counterpartyId: swap.requesterId,
-                  counterpartyName: swap.requester.name,
-                  counterpartyCity: swap.requester.city,
-                },
-                true
-              )
-            )
+            <div className="space-y-3.5">
+              {user.receivedSwaps.map((swap) =>
+                renderCard(
+                  {
+                    ...swap,
+                    counterpartyId: swap.requesterId,
+                    counterpartyName: swap.requester.name,
+                  },
+                  true
+                )
+              )}
+            </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-xs text-slate-400 font-medium">
-              لا توجد طلبات واردة.
-            </p>
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-2xs">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <Inbox className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-black text-slate-800">
+                لا توجد طلبات واردة حالياً
+              </p>
+              <p className="mt-1 max-w-xs text-xs font-medium leading-relaxed text-slate-400">
+                عندما يطلب أحد القرّاء أحد كتبك المعروضة، سيظهر الطلب هنا فوراً.
+              </p>
+            </div>
           )
         }
         outgoing={
           user.initiatedSwaps.length ? (
-            user.initiatedSwaps.map((swap) =>
-              card(
-                {
-                  ...swap,
-                  counterpartyId: swap.receiverId,
-                  counterpartyName: swap.receiver.name,
-                  counterpartyCity: swap.receiver.city,
-                },
-                false
-              )
-            )
+            <div className="space-y-3.5">
+              {user.initiatedSwaps.map((swap) =>
+                renderCard(
+                  {
+                    ...swap,
+                    counterpartyId: swap.receiverId,
+                    counterpartyName: swap.receiver.name,
+                  },
+                  false
+                )
+              )}
+            </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-xs text-slate-400 font-medium">
-              لم ترسل أي طلبات بعد.
-            </p>
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-2xs">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <Send className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-black text-slate-800">
+                لم ترسل أي طلبات بعد
+              </p>
+              <p className="mt-1 max-w-xs text-xs font-medium leading-relaxed text-slate-400">
+                تصفّح الكتب المتاحة في مدينتك وابدأ أول عملية تبادل.
+              </p>
+              <Link
+                href="/"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white transition hover:bg-slate-800 active:scale-95"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>تصفّح الكتب</span>
+              </Link>
+            </div>
           )
         }
       />

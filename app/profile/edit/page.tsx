@@ -2,19 +2,28 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import BackButton from "@/components/BackButton";
-
 import Link from "next/link";
-import { ArrowRight, User, AtSign, AlignLeft } from "lucide-react";
+import {
+  ArrowRight,
+  User,
+  AtSign,
+  Sparkles,
+  Lock,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
+
+const PAGE_PATH = "/profile/edit";
 
 export default async function EditProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.email) redirect("/login");
+
   const params = await searchParams;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -26,24 +35,44 @@ export default async function EditProfilePage({
     "use server";
     const current = await auth();
     if (!current?.user?.email) redirect("/login");
+
     const name = String(formData.get("name") ?? "").trim();
     const bio = String(formData.get("bio") ?? "").trim();
-    if (!name || name.length > 80 || bio.length > 300) {
+
+    if (!name || name.length > 80) {
       redirect(
-        `/profile/edit?error=${encodeURIComponent(
-          "اكتب اسماً من 1 إلى 80 حرفاً، واجعل النبذة أقل من 300 حرف."
+        `${PAGE_PATH}?error=${encodeURIComponent(
+          "يرجى كتابة اسم صالح بين 1 و 80 حرفاً."
         )}`
       );
     }
-    await prisma.user.update({
-      where: { email: current.user.email },
-      data: { name, bio: bio || null },
-    });
+
+    if (bio.length > 300) {
+      redirect(
+        `${PAGE_PATH}?error=${encodeURIComponent(
+          "يجب أن لا تتجاوز الاهتمامات 300 حرف."
+        )}`
+      );
+    }
+
+    try {
+      await prisma.user.update({
+        where: { email: current.user.email },
+        data: { name, bio: bio || null },
+      });
+    } catch {
+      redirect(
+        `${PAGE_PATH}?error=${encodeURIComponent(
+          "تعذّر حفظ التعديلات، حاول مجدداً."
+        )}`
+      );
+    }
+
+    revalidatePath(PAGE_PATH);
     revalidatePath("/profile");
     revalidatePath("/my-books");
     revalidatePath("/");
-
-    redirect("/profile");
+    redirect(`${PAGE_PATH}?saved=1`);
   }
 
   return (
@@ -51,38 +80,54 @@ export default async function EditProfilePage({
       dir="rtl"
       className="mx-auto w-full max-w-2xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر المتناسق */}
-      <div className="relative flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155] p-6 text-white shadow-md border border-slate-700/50">
-          <div className="absolute top-4 right-4 z-20">
-        
-                  <BackButton />
-                </div>
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-400/20 text-teal-400 mb-3 border border-teal-400/30">
-          <User className="h-7 w-7" />
-        </div>
-        <h1 className="text-xl sm:text-2xl font-black">تعديل الملف الشخصي</h1>
-    
-      </div>
+      <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
+        <Link
+          href="/profile"
+          title="رجوع"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+        >
+          <ArrowRight className="h-5 w-5" />
+        </Link>
+        <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
+          تعديل الملف الشخصي
+        </h1>
+        <div className="w-10" aria-hidden="true" />
+      </header>
 
-      {/* 📋 نموذج التعديل (Clean Form) */}
       <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs">
         {params.error && (
           <div
             role="alert"
-            className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-700 text-center"
+            className="mb-5 flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-center text-xs font-bold text-rose-700"
           >
+            <AlertCircle className="h-4 w-4 shrink-0" />
             {params.error}
           </div>
         )}
 
-        <form action={saveProfile} className="space-y-4">
+        {params.saved === "1" && (
+          <div
+            role="status"
+            className="mb-5 flex items-center justify-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 p-3.5 text-center text-xs font-bold text-teal-700"
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            تم حفظ تعديلات الملف الشخصي بنجاح.
+          </div>
+        )}
+
+        <form action={saveProfile} noValidate className="space-y-4">
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-black text-slate-700">
+            <label
+              htmlFor="name"
+              className="flex items-center gap-1.5 text-xs font-black text-slate-700"
+            >
               <User className="h-3.5 w-3.5 text-slate-400" />
               الاسم الكامل
             </label>
             <input
+              id="name"
               name="name"
+              type="text"
               required
               maxLength={80}
               defaultValue={user.name}
@@ -92,40 +137,56 @@ export default async function EditProfilePage({
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-black text-slate-700">
-              <AtSign className="h-3.5 w-3.5 text-slate-400" />
-              البريد الإلكتروني (غير قابل للتعديل)
+            <label
+              htmlFor="email"
+              className="flex items-center justify-between text-xs font-black text-slate-700"
+            >
+              <span className="flex items-center gap-1.5">
+                <AtSign className="h-3.5 w-3.5 text-slate-400" />
+                البريد الإلكتروني
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
+                <Lock className="h-3 w-3" />
+                غير قابل للتعديل
+              </span>
             </label>
             <input
+              id="email"
               type="email"
               value={user.email}
               readOnly
-              className="w-full cursor-not-allowed rounded-2xl border border-slate-200/60 bg-slate-100/60 px-4 py-3 text-sm font-bold text-slate-500 opacity-80 focus:outline-hidden"
+              className="w-full cursor-not-allowed rounded-2xl border border-slate-200/60 bg-slate-100/70 px-4 py-3 text-sm font-bold text-slate-500 focus:outline-hidden"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-xs font-black text-slate-700">
-              <AlignLeft className="h-3.5 w-3.5 text-slate-400" />
-              نبذة عنك (اختياري)
+            <label
+              htmlFor="bio"
+              className="flex items-center justify-between text-xs font-black text-slate-700"
+            >
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                اهتماماتي
+              </span>
+              <span className="text-[11px] font-medium text-slate-400">
+                اختياري • حتى 300 حرف
+              </span>
             </label>
             <textarea
+              id="bio"
               name="bio"
               rows={4}
               maxLength={300}
               defaultValue={user.bio ?? ""}
-              placeholder="شارك القراء اهتماماتك بالكتب والمجالات التي تحب القراءة فيها..."
-              className="w-full resize-y rounded-2xl border border-slate-200/80 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 transition focus:border-teal-500 focus:bg-white focus:outline-hidden"
+placeholder="مثلاً: الروايات التاريخية، الأدب، الفلسفة، وتطوير الذات..."
+              className="w-full resize-none rounded-2xl border border-slate-200/80 bg-slate-50/50 px-4 py-3 text-sm font-medium leading-relaxed text-slate-900 transition focus:border-teal-500 focus:bg-white focus:outline-hidden"
             />
-            <p className="text-[10px] font-bold text-slate-400 px-1">
-              الحد الأقصى 300 حرف.
-            </p>
           </div>
 
           <div className="pt-2">
             <PendingSubmitButton
-              pendingText="جارٍ الحفظ..."
-              className="w-full rounded-2xl bg-teal-600 px-5 py-3.5 text-sm font-black text-white transition hover:bg-teal-700 active:scale-98"
+              pendingText="جارٍ حفظ التعديلات..."
+              className="w-full rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-black text-white transition hover:bg-slate-800 active:scale-98"
             >
               حفظ التعديلات
             </PendingSubmitButton>

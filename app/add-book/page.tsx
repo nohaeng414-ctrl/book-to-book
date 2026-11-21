@@ -148,7 +148,7 @@ export default async function AddBookPage({
 
     revalidatePath("/my-books");
     revalidatePath("/profile");
-    revalidatePath("/notifications");
+    revalidatePath("/profile/notifications");
     revalidatePath("/");
     redirect("/my-books");
   }

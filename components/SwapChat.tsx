@@ -6,6 +6,7 @@ import {
   sendSwapMessageAction,
   getSwapMessagesAction,
 } from "@/app/actions/swapWorkflow";
+import LocationPickerModal from "@/components/LocationPickerModal";
 
 interface ChatMessage {
   id: string;
@@ -18,10 +19,20 @@ interface ChatMessage {
   };
 }
 
-// استخراج رابط الخريطة إذا كانت الرسالة تحتوي على موقع جغرافي
-function extractMapUrl(text: string): string | null {
+function extractMapData(text: string): { url: string; label: string } | null {
   const match = text.match(/https:\/\/www\.google\.com\/maps\?q=[-0-9.,]+/);
-  return match ? match[0] : null;
+  if (!match) return null;
+
+  const url = match[0];
+  const label = text
+    .replace(url, "")
+    .replace(/📍/g, "")
+    .trim();
+
+  return {
+    url,
+    label: label || "موقع التسليم",
+  };
 }
 
 export default function SwapChat({
@@ -36,8 +47,7 @@ export default function SwapChat({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true);
@@ -54,7 +64,6 @@ export default function SwapChat({
     return () => clearInterval(interval);
   }, [swapId]);
 
-  // تمرير صندوق المحادثة الداخلي فقط دون سحب الصفحة الرئيسية للأسفل
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
@@ -73,9 +82,8 @@ export default function SwapChat({
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = inputText.trim();
-    if (!text || sending || locating) return;
+    if (!text || sending) return;
 
-    setLocationError(null);
     setInputText("");
     setSending(true);
 
@@ -89,42 +97,24 @@ export default function SwapChat({
     }
   };
 
-  const handleShareLocation = () => {
-    if (sending || locating) return;
-    setLocationError(null);
+  const handleConfirmLocation = async ({
+    lat,
+    lng,
+    label,
+  }: {
+    lat: number;
+    lng: number;
+    label: string;
+  }) => {
+    const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+    const locationMessage = `📍 ${label}\n${mapUrl}`;
 
-    if (!navigator.geolocation) {
-      setLocationError("متصفحك لا يدعم ميزة تحديد الموقع.");
-      return;
+    const res = await sendSwapMessageAction(swapId, locationMessage);
+    if (res?.success && res.message) {
+      setMessages((prev) => [...prev, res.message as ChatMessage]);
+    } else {
+      throw new Error("Failed to send location");
     }
-
-    setLocating(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        const locationMessage = `📍 موقع الاستلام والتسليم:\n${mapUrl}`;
-
-        const res = await sendSwapMessageAction(swapId, locationMessage);
-        setLocating(false);
-
-        if (res?.success && res.message) {
-          setMessages((prev) => [...prev, res.message as ChatMessage]);
-        } else {
-          setLocationError("تعذر إرسال الموقع، حاول مرة أخرى.");
-        }
-      },
-      (error) => {
-        setLocating(false);
-        if (error.code === error.PERMISSION_DENIED) {
-          setLocationError("يرجى السماح للمتصفح بالوصول إلى موقعك الجغرافي.");
-        } else {
-          setLocationError("تعذر تحديد موقعك الحالي، تأكد من تفعيل خدمة الموقع.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
   };
 
   return (
@@ -143,7 +133,7 @@ export default function SwapChat({
         ) : (
           messages.map((msg) => {
             const isMe = msg.senderId === currentUserId;
-            const mapUrl = extractMapUrl(msg.content);
+            const mapData = extractMapData(msg.content);
 
             return (
               <div
@@ -160,14 +150,14 @@ export default function SwapChat({
                       : "bg-white text-slate-800 border border-slate-200 rounded-bl-xs"
                   }`}
                 >
-                  {mapUrl ? (
+                  {mapData ? (
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <MapPin className="h-3.5 w-3.5 shrink-0" />
-                        <span>موقع مقترح للتسليم</span>
+                      <div className="flex items-start gap-1.5 font-bold">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        <span>{mapData.label}</span>
                       </div>
                       <a
-                        href={mapUrl}
+                        href={mapData.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition ${
@@ -190,28 +180,18 @@ export default function SwapChat({
         )}
       </div>
 
-      {locationError && (
-        <p className="mt-1.5 rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1.5 text-[11px] font-bold text-rose-600">
-          {locationError}
-        </p>
-      )}
-
       <form
         onSubmit={handleSend}
         className="mt-2 flex items-center gap-2 pt-2 border-t border-slate-200"
       >
         <button
           type="button"
-          onClick={handleShareLocation}
-          disabled={sending || locating}
-          title="إرسال موقعي الحالي"
+          onClick={() => setIsMapOpen(true)}
+          disabled={sending}
+          title="تحديد موقع التسليم على الخريطة"
           className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-teal-600 hover:bg-teal-50 hover:border-teal-200 transition disabled:opacity-40 cursor-pointer shrink-0"
         >
-          {locating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <MapPin className="h-4 w-4" />
-          )}
+          <MapPin className="h-4 w-4" />
         </button>
 
         <input
@@ -224,7 +204,7 @@ export default function SwapChat({
 
         <button
           type="submit"
-          disabled={sending || locating || !inputText.trim()}
+          disabled={sending || !inputText.trim()}
           className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-40 cursor-pointer shrink-0"
         >
           {sending ? (
@@ -234,6 +214,12 @@ export default function SwapChat({
           )}
         </button>
       </form>
+
+      <LocationPickerModal
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        onConfirm={handleConfirmLocation}
+      />
     </div>
   );
 }
