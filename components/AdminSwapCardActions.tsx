@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Ban, ExternalLink, Loader2, X, ShieldAlert } from "lucide-react";
 import Link from "next/link";
-import { adminCancelSwapAction } from "@/app/actions/admin-swaps";
-
+import { adminCancelSwap as adminCancelSwapAction } from "@/app/actions/admin-swaps";
 interface Props {
   swapId: string;
   status: string;
@@ -34,8 +33,7 @@ export default function AdminSwapCardActions({ swapId, status }: Props) {
   const handleCancelSwap = async () => {
     setLoading(true);
     try {
-      await adminCancelSwapAction(swapId);
-      setShowCancelModal(false);
+await adminCancelSwapAction(swapId, "إلغاء إداري من لوحة التحكم");      setShowCancelModal(false);
       router.refresh();
     } finally {
       setLoading(false);
