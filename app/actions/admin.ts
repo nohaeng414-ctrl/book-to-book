@@ -12,6 +12,13 @@ import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/admin";
 import { revalidatePath } from "next/cache";
 
+const ADMIN_SETTLEABLE_SWAP_STATUSES: SwapStatus[] = [
+  SwapStatus.ACCEPTED,
+  SwapStatus.AWAITING_DELIVERY,
+  SwapStatus.AWAITING_CONFIRMATION,
+  SwapStatus.DISPUTED,
+];
+
 async function requireAdminUser() {
   const session = await auth();
   if (!session?.user?.email || !isAdminEmail(session.user.email)) {
@@ -58,14 +65,26 @@ export async function adminResolveSwapCompleteAction(
         if (!swap) {
           throw new Error("طلب التبادل غير موجود.");
         }
-        if (swap.status === SwapStatus.COMPLETED) {
-          throw new Error("هذا الطلب مكتمل بالفعل.");
+        if (reportId) {
+          const report = await tx.report.findUnique({
+            where: { id: reportId },
+            select: { swapId: true },
+          });
+          if (!report || report.swapId !== swap.id) {
+            throw new Error("البلاغ لا يرتبط بطلب التبادل المحدد.");
+          }
+        }
+        if (!ADMIN_SETTLEABLE_SWAP_STATUSES.includes(swap.status)) {
+          throw new Error("لا يمكن إتمام الطلب في حالته الحالية.");
         }
 
         const now = new Date();
 
-        await tx.swap.update({
-          where: { id: swap.id },
+        const changed = await tx.swap.updateMany({
+          where: {
+            id: swap.id,
+            status: { in: ADMIN_SETTLEABLE_SWAP_STATUSES },
+          },
           data: {
             status: SwapStatus.COMPLETED,
             deliveryConfirmed: true,
@@ -73,12 +92,23 @@ export async function adminResolveSwapCompleteAction(
             completedAt: now,
           },
         });
+        if (changed.count !== 1) {
+          throw new Error("تغيرت حالة الطلب؛ حدّث الصفحة وحاول مجدداً.");
+        }
 
         // نقل ملكية الكتاب المطلوب إلى طالب الكتاب
-        await tx.book.updateMany({
-          where: { id: swap.requestedBookId },
+        const receivedBook = await tx.book.updateMany({
+          where: {
+            id: swap.requestedBookId,
+            ownerId: swap.receiverId,
+            isAvailable: false,
+            isDeleted: false,
+          },
           data: { ownerId: swap.requesterId, isAvailable: true },
         });
+        if (receivedBook.count !== 1) {
+          throw new Error("تعذر نقل ملكية الكتاب المطلوب؛ أُلغيت التسوية.");
+        }
 
         // نقل ملكية جميع الكتب المعروضة في التبادل المباشر إلى صاحب الكتاب المطلوب
         if (swap.type === SwapType.DIRECT) {
@@ -91,23 +121,39 @@ export async function adminResolveSwapCompleteAction(
             ),
           ];
 
-          if (allOfferedIds.length > 0) {
-            await tx.book.updateMany({
-              where: { id: { in: allOfferedIds } },
+          if (allOfferedIds.length === 0) {
+            throw new Error("لا توجد كتب معروضة مرتبطة بهذا التبادل.");
+          }
+          const offeredBooks = await tx.book.updateMany({
+              where: {
+                id: { in: allOfferedIds },
+                ownerId: swap.requesterId,
+                isAvailable: false,
+                isDeleted: false,
+              },
               data: { ownerId: swap.receiverId, isAvailable: true },
             });
+          if (offeredBooks.count !== allOfferedIds.length) {
+            throw new Error("تعذر نقل ملكية الكتب المعروضة؛ أُلغيت التسوية.");
           }
         }
 
         // تسوية النقاط المحجوزة (سواء طلب نقاط كامل أو فرق نقاط في تبادل مباشر)
         if (swap.pointsCost > 0) {
-          await tx.user.update({
-            where: { id: swap.requesterId },
+          const spent = await tx.user.updateMany({
+            where: {
+              id: swap.requesterId,
+              points: { gte: swap.pointsCost },
+              reservedPoints: { gte: swap.pointsCost },
+            },
             data: {
               points: { decrement: swap.pointsCost },
               reservedPoints: { decrement: swap.pointsCost },
             },
           });
+          if (spent.count !== 1) {
+            throw new Error("تعذر تسوية النقاط المحجوزة؛ أُلغيت التسوية.");
+          }
 
           await tx.user.update({
             where: { id: swap.receiverId },
@@ -190,6 +236,7 @@ export async function adminResolveSwapCancelAction(
             type: true,
             status: true,
             requesterId: true,
+            receiverId: true,
             requestedBookId: true,
             offeredBookId: true,
             offeredBookIds: true,
@@ -200,21 +247,47 @@ export async function adminResolveSwapCancelAction(
         if (!swap) {
           throw new Error("طلب التبادل غير موجود.");
         }
-        if (swap.status === SwapStatus.CANCELLED) {
-          throw new Error("هذا الطلب ملغى بالفعل.");
+        if (reportId) {
+          const report = await tx.report.findUnique({
+            where: { id: reportId },
+            select: { swapId: true },
+          });
+          if (!report || report.swapId !== swap.id) {
+            throw new Error("البلاغ لا يرتبط بطلب التبادل المحدد.");
+          }
+        }
+        if (
+          ![
+            SwapStatus.PENDING,
+            ...ADMIN_SETTLEABLE_SWAP_STATUSES,
+          ].includes(swap.status)
+        ) {
+          throw new Error("لا يمكن إلغاء الطلب في حالته الحالية.");
         }
 
-        await tx.swap.update({
-          where: { id: swap.id },
+        const changed = await tx.swap.updateMany({
+          where: {
+            id: swap.id,
+            status: {
+              in: [SwapStatus.PENDING, ...ADMIN_SETTLEABLE_SWAP_STATUSES],
+            },
+          },
           data: {
             status: SwapStatus.CANCELLED,
             cancelReason: "تم إلغاء الطلب بقرار من الإدارة بعد مراجعة النزاع",
           },
         });
+        if (changed.count !== 1) {
+          throw new Error("تغيرت حالة الطلب؛ حدّث الصفحة وحاول مجدداً.");
+        }
 
         // إعادة إتاحة الكتاب المطلوب
         await tx.book.updateMany({
-          where: { id: swap.requestedBookId },
+          where: {
+            id: swap.requestedBookId,
+            ownerId: swap.receiverId,
+            isAvailable: false,
+          },
           data: { isAvailable: true },
         });
 
@@ -230,19 +303,29 @@ export async function adminResolveSwapCancelAction(
 
         if (lockedOfferIds.length > 0) {
           await tx.book.updateMany({
-            where: { id: { in: lockedOfferIds } },
+            where: {
+              id: { in: lockedOfferIds },
+              ownerId: swap.requesterId,
+              isAvailable: false,
+            },
             data: { isAvailable: true },
           });
         }
 
         // تحرير النقاط المحجوزة لصاحب الطلب
-        if (swap.pointsCost > 0 && swap.status !== SwapStatus.COMPLETED) {
-          await tx.user.update({
-            where: { id: swap.requesterId },
+        if (swap.pointsCost > 0) {
+          const released = await tx.user.updateMany({
+            where: {
+              id: swap.requesterId,
+              reservedPoints: { gte: swap.pointsCost },
+            },
             data: {
               reservedPoints: { decrement: swap.pointsCost },
             },
           });
+          if (released.count !== 1) {
+            throw new Error("تعذر تحرير النقاط المحجوزة؛ أُلغيت العملية.");
+          }
 
           await tx.pointTransaction.createMany({
             skipDuplicates: true,

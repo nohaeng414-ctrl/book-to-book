@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import BackButton from "@/components/BackButton";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import {
-  ArrowRight,
   User,
   AtSign,
   Sparkles,
@@ -81,13 +81,9 @@ export default async function EditProfilePage({
       className="mx-auto w-full max-w-2xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
       <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
-        <Link
-          href="/profile"
-          title="رجوع"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
-        >
-          <ArrowRight className="h-5 w-5" />
-        </Link>
+          <div className="shrink-0 z-10">
+          <BackButton />
+        </div>
         <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
           تعديل الملف الشخصي
         </h1>

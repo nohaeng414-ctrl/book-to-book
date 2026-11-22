@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { isAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +9,7 @@ import ConfirmReceiptModal from "@/components/ConfirmReceiptModal";
 import SwapReviewModal from "@/components/SwapReviewModal";
 import SwapChat from "@/components/SwapChat";
 import CancelAcceptedSwapButton from "@/components/CancelAcceptedSwapButton";
+import AdminSwapCancelButton from "@/components/AdminSwapCancelButton";
 import SelectBookModal from "@/components/SelectBookModal";
 import SwapDisputeModal from "@/components/SwapDisputeModal";
 import { updateSwapStatusAction } from "@/app/actions/swapWorkflow";
@@ -23,6 +25,7 @@ import {
   ArrowLeftRight,
   CheckCircle2,
   Clock,
+  ShieldAlert,
 } from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
 
@@ -57,6 +60,14 @@ const STATUS_STEP: Record<string, number> = {
   DISPUTED: 0,
 };
 
+const ADMIN_CANCELLABLE_STATUSES = [
+  "PENDING",
+  "ACCEPTED",
+  "AWAITING_DELIVERY",
+  "AWAITING_CONFIRMATION",
+  "DISPUTED",
+];
+
 export default async function SwapDetailPage({
   params,
   searchParams,
@@ -64,8 +75,12 @@ export default async function SwapDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const [{ id }, query] = await Promise.all([params, searchParams]);
-  const session = await auth();
+  const [{ id }, query, session, adminUser] = await Promise.all([
+    params,
+    searchParams,
+    auth(),
+    isAdmin(),
+  ]);
   if (!session?.user?.email) redirect("/login");
 
   const currentUser = await prisma.user.findUnique({
@@ -127,16 +142,19 @@ export default async function SwapDetailPage({
 
   const isRequester = swap.requesterId === currentUser.id;
   const isReceiver = swap.receiverId === currentUser.id;
+  const isParticipant = isRequester || isReceiver;
+  const isAdminOnly = adminUser && !isParticipant;
 
-  if (!isRequester && !isReceiver) redirect("/swaps/history");
+  if (!isParticipant && !adminUser) redirect("/swaps/history");
 
   const otherParty = isRequester ? swap.receiver : swap.requester;
   const otherPartyLocation = [otherParty.neighborhood, otherParty.city]
     .filter(Boolean)
     .join("، ");
 
-  const myReview =
-    swap.reviews.find((r) => r.reviewerId === currentUser.id) || null;
+  const myReview = isParticipant
+    ? swap.reviews.find((r) => r.reviewerId === currentUser.id) || null
+    : null;
 
   const candidateBooks =
     swap.type === "DIRECT" && isReceiver && swap.status === "PENDING"
@@ -221,10 +239,11 @@ export default async function SwapDetailPage({
 
   // يُسمح لمقدّم الطلب بإلغائه قبل الموافقة، وللطرفين بعد القبول قبل تأكيد التسليم
   const canCancelSwap =
-    (swap.status === "PENDING" && !isReceiver) ||
-    ((swap.status === "ACCEPTED" || swap.status === "AWAITING_DELIVERY") &&
-      !swap.deliveryConfirmed &&
-      !swap.receiptConfirmed);
+    isParticipant &&
+    ((swap.status === "PENDING" && !isReceiver) ||
+      ((swap.status === "ACCEPTED" || swap.status === "AWAITING_DELIVERY") &&
+        !swap.deliveryConfirmed &&
+        !swap.receiptConfirmed));
 
   // زر رفع الشكوى متاح أثناء مرحلة الاستلام والتسليم ولمدة 7 أيام بعد الاكتمال
   const completedReferenceDate = swap.completedAt ?? swap.updatedAt;
@@ -232,7 +251,12 @@ export default async function SwapDetailPage({
     isCompleted &&
     now.getTime() - completedReferenceDate.getTime() <= COMPLAINT_WINDOW_MS;
 
-  const canShowComplaintButton = isDeliveryStage || isWithinComplaintWindow;
+  const canShowComplaintButton =
+    isParticipant && (isDeliveryStage || isWithinComplaintWindow);
+
+  // هل يحق للأدمن إلغاء هذا الطلب إدارياً؟
+  const canAdminCancel =
+    adminUser && ADMIN_CANCELLABLE_STATUSES.includes(swap.status);
 
   async function handleAccept() {
     "use server";
@@ -266,6 +290,31 @@ export default async function SwapDetailPage({
           تفاصيل الطلب
         </h1>
       </header>
+
+      {/* شارة وضع معاينة الإدارة */}
+      {isAdminOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3.5 py-2.5 text-xs">
+          <div className="flex items-center gap-2 font-black text-amber-900">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>وضع معاينة الإدارة</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+            <Link
+              href={`/users/${swap.requester.id}`}
+              className="text-slate-900 hover:text-teal-700 hover:underline"
+            >
+              {swap.requester.name}
+            </Link>
+            <span className="text-slate-400">←</span>
+            <Link
+              href={`/users/${swap.receiver.id}`}
+              className="text-slate-900 hover:text-teal-700 hover:underline"
+            >
+              {swap.receiver.name}
+            </Link>
+          </div>
+        </div>
+      )}
 
       {query.error && (
         <p
@@ -314,6 +363,8 @@ export default async function SwapDetailPage({
               ? "هذا الطلب قيد المراجعة الإدارية."
               : swap.status === "REJECTED"
               ? "تم رفض هذا الطلب."
+              : swap.cancelReason
+              ? `تم إلغاء هذا الطلب (${swap.cancelReason}).`
               : "تم إلغاء هذا الطلب."}
           </span>
         </section>
@@ -520,7 +571,7 @@ export default async function SwapDetailPage({
       )}
 
       {/* 4ب. الإجراء الأساسي: زر تأكيد الاستلام/التسليم مع عدّاد 48 ساعة */}
-      {isDeliveryStage && (
+      {isParticipant && isDeliveryStage && (
         <div className="space-y-2">
           {myConfirmed ? (
             <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-xs font-black text-emerald-800">
@@ -565,7 +616,7 @@ export default async function SwapDetailPage({
       )}
 
       {/* 5. التقييم بعد الاكتمال */}
-      {isCompleted && (
+      {isParticipant && isCompleted && (
         <SwapReviewModal
           swapId={swap.id}
           recipientId={otherParty.id}
@@ -588,8 +639,8 @@ export default async function SwapDetailPage({
         </section>
       )}
 
-      {/* 7. الإجراءات الثانوية في أسفل الصفحة بالتسلسل القياسي */}
-      {(canCancelSwap || canShowComplaintButton) && (
+      {/* 7. الإجراءات الثانوية والإدارية في أسفل الصفحة */}
+      {(canCancelSwap || canShowComplaintButton || canAdminCancel) && (
         <footer className="space-y-2.5 border-t border-slate-200/80 pt-3">
           {canCancelSwap && <CancelAcceptedSwapButton swapId={swap.id} />}
 
@@ -599,6 +650,13 @@ export default async function SwapDetailPage({
               reportedUserId={otherParty.id}
               reportedUserName={otherParty.name}
               isCompleted={isCompleted}
+            />
+          )}
+
+          {canAdminCancel && (
+            <AdminSwapCancelButton
+              swapId={swap.id}
+              bookTitle={swap.requestedBook.title}
             />
           )}
         </footer>

@@ -3,10 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/admin"; // 👈 استيراد دالة التحقق من المشرف
 import Link from "next/link";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
-import { countriesList } from "@/data/locations";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import {
   User,
   LogOut,
@@ -20,15 +17,9 @@ import {
 } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ locationError?: string; locationSaved?: string }>;
-}) {
+export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.email) redirect("/login");
-
-  const params = await searchParams;
 
   const dbUser = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -36,59 +27,10 @@ export default async function SettingsPage({
       id: true,
       name: true,
       email: true,
-      country: true,
-      language: true,
-      city: true,
-      neighborhood: true,
     },
   });
 
   if (!dbUser) redirect("/login");
-
-  async function saveLocation(formData: FormData) {
-    "use server";
-    const current = await auth();
-    if (!current?.user?.email) redirect("/login");
-
-    const country = String(formData.get("country") ?? "");
-    const language = String(formData.get("language") ?? "");
-    const city = String(formData.get("city") ?? "").trim();
-    const neighborhood = String(formData.get("neighborhood") ?? "").trim();
-
-    if (
-      !countriesList.includes(country) ||
-      !["ar", "en"].includes(language) ||
-      city.length < 2 ||
-      city.length > 80 ||
-      neighborhood.length > 100
-    ) {
-      redirect(
-        `/settings?locationError=${encodeURIComponent(
-          "تحقق من اللغة والدولة والمدينة والحي وحاول مجدداً."
-        )}`
-      );
-    }
-
-    await prisma.user.update({
-      where: { email: current.user.email },
-      data: { language, country, city, neighborhood: neighborhood || null },
-    });
-
-    const cookieStore = await cookies();
-    cookieStore.set("book-language", language, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
-
-    revalidatePath("/profile");
-    revalidatePath("/settings");
-    revalidatePath("/");
-    revalidatePath("/requests");
-    redirect("/settings?locationSaved=1");
-  }
 
   return (
     <main dir="rtl" className="mx-auto w-full max-w-3xl space-y-6 px-3 sm:px-4 py-6 text-[#0F172A]">

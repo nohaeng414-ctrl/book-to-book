@@ -81,6 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("ACCOUNT_BANNED");
         }
 
+      
    
 
         console.log("✅ نجاح: تم التحقق من بيانات المستخدم وتسجيل دخوله بنجاح:", user.email);

@@ -1,33 +1,40 @@
+"use client";
+
 interface UserAvatarProps {
-  userId?: string | null;
+  userId: string;
   name?: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
 
-function getInitials(name: string | null | undefined) {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "ق";
-  return parts.length > 1
-    ? `${Array.from(parts[0])[0]}${Array.from(parts[1])[0]}`
-    : Array.from(parts[0]).slice(0, 2).join("");
-}
+const sizeClasses: Record<"sm" | "md" | "lg", string> = {
+  sm: "h-8 w-8",
+  md: "h-10 w-10",
+  lg: "h-20 w-20",
+};
 
 export default function UserAvatar({
+  userId,
   name,
   size = "md",
   className = "",
 }: UserAvatarProps) {
-  const sizeClasses =
-    size === "sm" ? "h-7 w-7 text-[10px]" : size === "lg" ? "h-20 w-20 text-2xl" : "h-9 w-9 text-xs";
+  const seed = encodeURIComponent(userId || name || "reader");
+
+  // رابط توليد شخصية كرتونية فريدة وثابتة لكل مستخدم
+  const avatarUrl = `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
 
   return (
     <div
-      aria-label={name ? `الصورة الرمزية لـ ${name}` : "الصورة الرمزية للمستخدم"}
-      role="img"
-      className={`relative shrink-0 aspect-square overflow-hidden rounded-full border border-slate-200/90 bg-slate-100 flex items-center justify-center font-bold text-slate-600 shadow-xs ${sizeClasses} ${className}`}
+      className={`relative shrink-0 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/80 ${sizeClasses[size]} ${className}`}
     >
-      {getInitials(name)}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={avatarUrl}
+        alt={name ? `صورة ${name}` : "صورة المستخدم"}
+        loading="lazy"
+        className="h-full w-full object-cover"
+      />
     </div>
   );
 }

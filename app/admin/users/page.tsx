@@ -108,35 +108,44 @@ export default async function AdminUsersPage({
       dir="rtl"
       className="mx-auto w-full max-w-4xl space-y-4 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر العصري الموحد مع زر الإشعار الجماعي في اليسار */}
-      <header className="relative flex items-center justify-between rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-md">
-        {/* زر الرجوع في اليمين */}
-        <div className="absolute top-4 right-4 z-20">
-          <BackButton />
+      {/* 🧭 الهيدر التنفيذي الموحّد */}
+      <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-5 sm:p-6 text-white shadow-lg">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-20 -left-20 h-56 w-56 rounded-full bg-teal-500/15 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -right-16 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl"
+        />
+
+        <div className="relative z-30 flex items-center justify-between gap-3">
+          <div className="shrink-0">
+            <BackButton className="!h-auto !w-auto !rounded-none !border-0 !bg-transparent !p-1.5 !backdrop-blur-none text-slate-200 hover:!bg-transparent hover:text-white active:scale-95 [&_svg]:text-slate-200" />
+          </div>
+          <div className="shrink-0">
+            <AdminBroadcastModal />
+          </div>
         </div>
 
-        {/* 📢 زر إشعار للجميع في اليسار */}
-        <div className="absolute top-4 left-4 z-20">
-          <AdminBroadcastModal />
-        </div>
-
-        <div className="flex flex-col items-center w-full text-center pt-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-400/10 border border-teal-400/20 text-teal-400 mb-2 shadow-inner">
-            <Users className="h-6 w-6" />
+        <div className="relative z-10 mt-1 flex flex-col items-center w-full text-center">
+          <div className="mb-2.5 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-teal-400 ring-1 ring-white/15">
+            <Users className="h-5 w-5 stroke-[1.75]" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             إدارة الأعضاء
           </h1>
           <p className="mt-1 text-xs text-slate-300">
-            البحث عن القراء، مراجعة كتبهم ونقاطهم، وإجراءات الحظر والتنبيه والحذف
+            متابعة حسابات القراء، أرصدة النقاط، المكتبات، وإجراءات الحظر والتنبيه
           </p>
+
+         
         </div>
       </header>
 
-      {/* 🔍 شريط البحث والفلترة الموحد على الطريقة العالمية */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-2xs">
-        {/* تبويبات الفلترة */}
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-center text-xs font-bold sm:w-80 shrink-0">
+      {/* 🔍 شريط الفلترة والبحث */}
+      <div className="space-y-2.5 rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-2xs">
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-center text-xs font-bold">
           <Link
             href={`/admin/users?status=ALL${
               searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""
@@ -160,7 +169,7 @@ export default async function AdminUsersPage({
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            <CheckCircle2 className="h-3.5 w-3.5" />
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             <span>نشط ({toArabicNumerals(activeCount)})</span>
           </Link>
 
@@ -174,22 +183,25 @@ export default async function AdminUsersPage({
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            <Ban className="h-3.5 w-3.5" />
+            <Ban className="h-3.5 w-3.5 shrink-0" />
             <span>محظور ({toArabicNumerals(bannedCount)})</span>
           </Link>
         </div>
 
-        {/* حقل البحث */}
-        <form action="/admin/users" method="GET" className="flex items-center gap-1.5 flex-1">
+        <form
+          action="/admin/users"
+          method="GET"
+          className="flex items-center gap-2"
+        >
           <input type="hidden" name="status" value={validStatus} />
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               name="q"
               defaultValue={searchQuery}
               placeholder="ابحث بالاسم، البريد، أو المدينة..."
-              className="w-full rounded-xl bg-slate-50 pr-9 pl-8 py-2 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-teal-600"
+              className="w-full rounded-xl border border-slate-200/70 bg-slate-50 pr-9 pl-8 py-2 text-xs font-bold text-slate-900 placeholder:text-slate-400 transition focus:border-teal-500 focus:bg-white focus:outline-none"
             />
             {searchQuery && (
               <Link
@@ -203,51 +215,57 @@ export default async function AdminUsersPage({
           </div>
           <button
             type="submit"
-            className="rounded-xl bg-slate-900 hover:bg-slate-800 px-4 py-2 text-xs font-black text-white transition cursor-pointer"
+            className="shrink-0 rounded-xl bg-slate-900 hover:bg-slate-800 px-4 py-2 text-xs font-black text-white transition active:scale-95 cursor-pointer"
           >
             بحث
           </button>
         </form>
       </div>
 
-      {/* 👥 القائمة الاحترافية الموحدة للأعضاء */}
+      {/* 👥 قائمة الأعضاء */}
       <section className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs divide-y divide-slate-100">
         {users.length > 0 ? (
           users.map((u) => {
             const completedSwaps =
               u._count.initiatedSwaps + u._count.receivedSwaps;
             const isCurrentAdmin = u.email === session.user?.email;
+            const locationText =
+              [u.neighborhood, u.city, u.country].filter(Boolean).join("، ") ||
+              "غير محدد";
 
             return (
               <article
-                key={u.id}
-                className="p-4 sm:p-5 hover:bg-slate-50/50 transition first:rounded-t-3xl last:rounded-b-3xl space-y-2.5 text-right"
+               key={u.id}
+                className="p-4 sm:p-5 hover:bg-slate-50/60 transition first:rounded-t-3xl last:rounded-b-3xl space-y-3 text-right"
               >
+                {/* الصف العلوي: الصورة جنب الاسم مباشرة + الشارات + إحصائيات سطح المكتب */}
                 <div className="flex items-center justify-between gap-3">
-                  {/* يمين الصف: الصورة والاسم والمعلومات */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <UserAvatar userId={u.id} name={u.name} size="md" />
+                    <div className="shrink-0">
+                      <UserAvatar userId={u.id} name={u.name} size="md" />
+                    </div>
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <Link
                           href={`/users/${u.id}`}
-                          className="truncate text-sm font-black text-slate-900 hover:text-teal-700 transition"
+                          className="text-sm font-black text-slate-900 hover:text-teal-700 transition truncate"
                         >
-                          {u.name}
+                          {u.name || "عضو"}
                         </Link>
 
                         {isCurrentAdmin && (
-                          <span className="rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                          <span className="shrink-0 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-black text-amber-800">
                             المشرف
                           </span>
                         )}
 
                         {u.isBanned ? (
-                          <span className="rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-black text-rose-700">
+                          <span className="shrink-0 rounded-full bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-black text-rose-700">
                             محظور
                           </span>
                         ) : (
-                          <span className="rounded-full bg-teal-50 border border-teal-200 px-2 py-0.5 text-[10px] font-bold text-teal-700">
+                          <span className="shrink-0 rounded-full bg-teal-50 border border-teal-200 px-2 py-0.5 text-[10px] font-bold text-teal-700">
                             نشط
                           </span>
                         )}
@@ -255,10 +273,12 @@ export default async function AdminUsersPage({
                         {u._count.reportsReceived > 0 && (
                           <Link
                             href="/admin/reports"
-                            className="inline-flex items-center gap-1 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-black text-rose-700 transition"
+                            className="shrink-0 inline-flex items-center gap-1 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 text-[10px] font-black text-rose-700 transition"
                           >
                             <Flag className="h-3 w-3 text-rose-500" />
-                            <span>{toArabicNumerals(u._count.reportsReceived)} بلاغ</span>
+                            <span>
+                              {toArabicNumerals(u._count.reportsReceived)} بلاغ
+                            </span>
                           </Link>
                         )}
                       </div>
@@ -267,57 +287,61 @@ export default async function AdminUsersPage({
                         {u.email}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 mt-1">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-teal-500" />
-                          {[u.neighborhood, u.city, u.country]
-                            .filter(Boolean)
-                            .join("، ") || "غير محدد"}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 mt-1">
+                        <span className="inline-flex items-center gap-1 min-w-0 truncate">
+                          <MapPin className="h-3 w-3 shrink-0 text-teal-500" />
+                          <span className="truncate">{locationText}</span>
                         </span>
-                        <span className="flex items-center gap-1 text-slate-400">
-                          <Calendar className="h-3 w-3" />
-                          {formatArabicDate(u.createdAt)}
+                        <span className="inline-flex items-center gap-1 text-slate-400">
+                          <Calendar className="h-3 w-3 shrink-0" />
+                          <span>{formatArabicDate(u.createdAt)}</span>
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* يسار الصف: المؤشرات الهادئة + زر القائمة الثلاثية (⋮) */}
-                  <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-                    <div className="hidden sm:flex items-center gap-2 text-xs">
-                      <span
-                        className="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700"
-                        title={
-                          u.reservedPoints > 0
-                            ? `منها ${toArabicNumerals(u.reservedPoints)} نقاط محجوزة`
-                            : "رصيد النقاط"
-                        }
-                      >
-                        <Coins className="h-3.5 w-3.5 text-amber-500" />
-                        <span>{toArabicNumerals(u.points)}</span>
-                      </span>
+                  {/* مؤشرات العضو على الشاشات الكبيرة */}
+                  <div className="hidden sm:flex items-center gap-2 text-xs shrink-0">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700"
+                      title={
+                        u.reservedPoints > 0
+                          ? `منها ${toArabicNumerals(u.reservedPoints)} نقاط محجوزة`
+                          : "رصيد النقاط"
+                      }
+                    >
+                      <Coins className="h-3.5 w-3.5 text-amber-500" />
+                      <span>{toArabicNumerals(u.points)}</span>
+                    </span>
 
-                      <span className="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
-                        <BookOpen className="h-3.5 w-3.5 text-blue-500" />
-                        <span>{toArabicNumerals(u.books.length)}</span>
-                      </span>
+                    <span className="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
+                      <BookOpen className="h-3.5 w-3.5 text-blue-500" />
+                      <span>{toArabicNumerals(u.books.length)}</span>
+                    </span>
 
-                      <span className="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
-                        <ArrowRightLeft className="h-3.5 w-3.5 text-teal-600" />
-                        <span>{toArabicNumerals(completedSwaps)}</span>
-                      </span>
-                    </div>
-
-                    {/* ⋮ زر الإجراءات المنسدل الأنيق */}
-                    <AdminUserCardActions
-                      userId={u.id}
-                      userName={u.name}
-                      isBanned={u.isBanned}
-                      banReason={u.banReason}
-                      currentPoints={u.points}
-                      books={u.books}
-                    />
+                    <span className="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
+                      <ArrowRightLeft className="h-3.5 w-3.5 text-teal-600" />
+                      <span>{toArabicNumerals(completedSwaps)}</span>
+                    </span>
                   </div>
+                </div>
+
+                {/* شريط المؤشرات المخصص للجوال */}
+                <div className="flex sm:hidden items-center gap-2 overflow-x-auto pb-0.5 text-[11px]">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
+                    <Coins className="h-3.5 w-3.5 text-amber-500" />
+                    <span>{toArabicNumerals(u.points)} نقطة</span>
+                  </span>
+
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
+                    <BookOpen className="h-3.5 w-3.5 text-blue-500" />
+                    <span>{toArabicNumerals(u.books.length)} كتاب</span>
+                  </span>
+
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-slate-50 border border-slate-200/70 px-2.5 py-1 font-bold text-slate-700">
+                    <ArrowRightLeft className="h-3.5 w-3.5 text-teal-600" />
+                    <span>{toArabicNumerals(completedSwaps)} تبادل</span>
+                  </span>
                 </div>
 
                 {/* سبب الحظر يظهر بسطر هادئ فقط إذا كان العضو محظوراً */}
@@ -326,6 +350,16 @@ export default async function AdminUsersPage({
                     <strong>سبب الحظر:</strong> {u.banReason}
                   </div>
                 )}
+
+                {/* أزرار الإجراءات أسفل البطاقة بسطر مستقل */}
+                <AdminUserCardActions
+                  userId={u.id}
+                  userName={u.name}
+                  isBanned={u.isBanned}
+                  banReason={u.banReason}
+                  currentPoints={u.points}
+                  books={u.books}
+                />
               </article>
             );
           })

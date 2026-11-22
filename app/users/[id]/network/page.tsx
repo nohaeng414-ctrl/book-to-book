@@ -136,14 +136,15 @@ export default async function UserNetworkPage({
                 </Link>
 
                 {/* زر المتابعة الفردي التفاعلي */}
-                {!isMe && currentUser && (
-                  <div className="shrink-0">
-                    <FollowButton
-                      targetUserId={item.id}
-                      initialIsFollowing={isFollowingThisUser}
-                    />
-                  </div>
-                )}
+              {!isMe && currentUser && (
+  <div className="shrink-0">
+    <FollowButton
+      targetUserId={item.id}
+      initialIsFollowing={isFollowingThisUser}
+      currentUserId={currentUser.id}
+    />
+  </div>
+)}
               </div>
             );
           })

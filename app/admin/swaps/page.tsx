@@ -4,9 +4,21 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
-import AdminSwapCardActions from "@/components/AdminSwapCardActions";
-import { Search, X, ArrowRightLeft, Coins, Clock, CheckCircle2, Ban, ShieldAlert } from "lucide-react";
+import {
+  Search,
+  X,
+  ArrowRightLeft,
+  Coins,
+  Clock,
+  CheckCircle2,
+  Ban,
+  ShieldAlert,
+  BookOpen,
+  User,
+  ChevronLeft,
+} from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
+import { Prisma } from "@/generated/prisma-full";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +41,14 @@ const SWAP_STATUS_LABELS: Record<string, string> = {
   DISPUTED: "متنازع عليه",
 };
 
+const ACTIVE_STATUSES = [
+  "PENDING",
+  "ACCEPTED",
+  "AWAITING_DELIVERY",
+  "AWAITING_CONFIRMATION",
+  "DISPUTED",
+] as const;
+
 export default async function AdminSwapsPage({
   searchParams,
 }: {
@@ -40,12 +60,16 @@ export default async function AdminSwapsPage({
 
   const { q = "", status = "ALL" } = await searchParams;
   const searchQuery = q.trim();
-  const validStatus = ["ALL", "ACTIVE", "COMPLETED", "CANCELLED"].includes(status) ? status : "ALL";
+  const validStatus = ["ALL", "ACTIVE", "COMPLETED", "CANCELLED"].includes(
+    status
+  )
+    ? status
+    : "ALL";
 
-  const whereClause: any = {};
+  const whereClause: Prisma.SwapWhereInput = {};
 
   if (validStatus === "ACTIVE") {
-    whereClause.status = { in: ["PENDING", "ACCEPTED", "AWAITING_DELIVERY", "AWAITING_CONFIRMATION", "DISPUTED"] };
+    whereClause.status = { in: [...ACTIVE_STATUSES] };
   } else if (validStatus === "COMPLETED") {
     whereClause.status = "COMPLETED";
   } else if (validStatus === "CANCELLED") {
@@ -54,13 +78,17 @@ export default async function AdminSwapsPage({
 
   if (searchQuery) {
     whereClause.OR = [
-      { requestedBook: { title: { contains: searchQuery, mode: "insensitive" } } },
+      {
+        requestedBook: {
+          title: { contains: searchQuery, mode: "insensitive" },
+        },
+      },
       { requester: { name: { contains: searchQuery, mode: "insensitive" } } },
       { receiver: { name: { contains: searchQuery, mode: "insensitive" } } },
     ];
   }
 
-  const [swaps, totalCount, activeCount, completedCount, cancelledCount] = await Promise.all([
+  const [swaps, totalCount, activeCount, disputedCount] = await Promise.all([
     prisma.swap.findMany({
       where: whereClause,
       select: {
@@ -69,8 +97,10 @@ export default async function AdminSwapsPage({
         status: true,
         pointsCost: true,
         createdAt: true,
-        requestedBook: { select: { title: true, points: true } },
-        offeredBook: { select: { title: true } },
+        requestedBook: {
+          select: { id: true, title: true, points: true, updatedAt: true },
+        },
+        offeredBook: { select: { id: true, title: true } },
         requester: { select: { id: true, name: true } },
         receiver: { select: { id: true, name: true } },
       },
@@ -78,35 +108,63 @@ export default async function AdminSwapsPage({
       take: 50,
     }),
     prisma.swap.count(),
-    prisma.swap.count({ where: { status: { in: ["PENDING", "ACCEPTED", "AWAITING_DELIVERY", "AWAITING_CONFIRMATION", "DISPUTED"] } } }),
-    prisma.swap.count({ where: { status: "COMPLETED" } }),
-    prisma.swap.count({ where: { status: { in: ["CANCELLED", "REJECTED"] } } }),
+    prisma.swap.count({ where: { status: { in: [...ACTIVE_STATUSES] } } }),
+    prisma.swap.count({ where: { status: "DISPUTED" } }),
   ]);
 
   return (
-    <main dir="rtl" className="mx-auto w-full max-w-4xl space-y-4 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]">
-      {/* 🧭 الهيدر العصري الموحد */}
-      <header className="relative flex items-center justify-between rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-md">
+    <main
+      dir="rtl"
+      className="mx-auto w-full max-w-4xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
+    >
+      {/* 🧭 الهيدر التنفيذي الموحّد */}
+      <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-6 text-white shadow-lg">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-20 -left-20 h-56 w-56 rounded-full bg-amber-500/15 blur-3xl"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -right-16 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl"
+        />
+
         <div className="absolute top-4 right-4 z-20">
-          <BackButton />
+          <BackButton className="!h-auto !w-auto !rounded-none !border-0 !bg-transparent !p-1.5 !backdrop-blur-none text-slate-200 hover:!bg-transparent hover:text-white active:scale-95 [&_svg]:text-slate-200" />
         </div>
 
-        <div className="flex flex-col items-center w-full text-center pt-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400/10 border border-amber-400/20 text-amber-400 mb-2 shadow-inner">
-            <ArrowRightLeft className="h-6 w-6" />
+        <div className="relative z-10 flex flex-col items-center w-full text-center pt-2">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-amber-400 ring-1 ring-white/15">
+            <ArrowRightLeft className="h-5 w-5 stroke-[1.75]" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             إدارة الطلبات
           </h1>
           <p className="mt-1 text-xs text-slate-300">
-            متابعة العمليات الجارية، التحقق من الحالات، وإلغاء الطلبات المتعثرة
+            متابعة التبادلات الجارية، التحقق من الحالات، ومعالجة الطلبات المتعثرة
           </p>
+
+          <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1 text-[11px] font-bold text-slate-200 backdrop-blur-md">
+            <span>إجمالي الطلبات:</span>
+            <strong className="text-white">{toArabicNumerals(totalCount)}</strong>
+            <span className="text-slate-500">•</span>
+            <span className="text-teal-300">
+              {toArabicNumerals(activeCount)} جارية
+            </span>
+            {disputedCount > 0 && (
+              <>
+                <span className="text-slate-500">•</span>
+                <span className="text-rose-400">
+                  {toArabicNumerals(disputedCount)} متنازع عليه
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* 🔍 شريط البحث والفلترة الموحد */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-2xs">
-        <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-center text-xs font-bold md:w-[26rem] shrink-0">
+      {/* 🔍 شريط البحث والفلترة */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-2xs">
+        <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-center text-xs font-bold md:w-[25rem] shrink-0">
           <Link
             href={`/admin/swaps?status=ALL${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
@@ -115,8 +173,9 @@ export default async function AdminSwapsPage({
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            <span>الكل ({toArabicNumerals(totalCount)})</span>
+            <span>الكل</span>
           </Link>
+
           <Link
             href={`/admin/swaps?status=ACTIVE${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
@@ -126,8 +185,9 @@ export default async function AdminSwapsPage({
             }`}
           >
             <Clock className="h-3.5 w-3.5 hidden sm:inline" />
-            <span>جارية ({toArabicNumerals(activeCount)})</span>
+            <span>جارية</span>
           </Link>
+
           <Link
             href={`/admin/swaps?status=COMPLETED${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
@@ -139,6 +199,7 @@ export default async function AdminSwapsPage({
             <CheckCircle2 className="h-3.5 w-3.5 hidden sm:inline" />
             <span>مكتملة</span>
           </Link>
+
           <Link
             href={`/admin/swaps?status=CANCELLED${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
@@ -152,7 +213,11 @@ export default async function AdminSwapsPage({
           </Link>
         </div>
 
-        <form action="/admin/swaps" method="GET" className="flex items-center gap-1.5 flex-1">
+        <form
+          action="/admin/swaps"
+          method="GET"
+          className="flex items-center gap-1.5 flex-1"
+        >
           <input type="hidden" name="status" value={validStatus} />
           <div className="relative flex-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -161,7 +226,7 @@ export default async function AdminSwapsPage({
               name="q"
               defaultValue={searchQuery}
               placeholder="ابحث باسم الكتاب أو الأطراف..."
-              className="w-full rounded-xl bg-slate-50 pr-9 pl-8 py-2 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-teal-600"
+              className="w-full rounded-xl border border-slate-200/70 bg-slate-50 pr-9 pl-8 py-2 text-xs font-bold text-slate-900 placeholder:text-slate-400 transition focus:border-teal-500 focus:bg-white focus:outline-none"
             />
             {searchQuery && (
               <Link
@@ -175,84 +240,125 @@ export default async function AdminSwapsPage({
           </div>
           <button
             type="submit"
-            className="rounded-xl bg-slate-900 hover:bg-slate-800 px-4 py-2 text-xs font-black text-white transition cursor-pointer"
+            className="rounded-xl bg-slate-900 hover:bg-slate-800 px-4 py-2 text-xs font-black text-white transition active:scale-95 cursor-pointer"
           >
             بحث
           </button>
         </form>
       </div>
 
-      {/* 🔄 القائمة الاحترافية الموحدة للطلبات */}
+      {/* 🔄 قائمة الطلبات */}
       <section className="rounded-3xl border border-slate-200/80 bg-white shadow-2xs divide-y divide-slate-100">
         {swaps.length > 0 ? (
           swaps.map((s) => (
-            <article
+            <Link
               key={s.id}
-              className="p-4 sm:p-5 hover:bg-slate-50/50 transition first:rounded-t-3xl last:rounded-b-3xl text-right"
+              href={`/swaps/${s.id}`}
+              className="group block p-4 sm:p-5 hover:bg-slate-50/70 transition first:rounded-t-3xl last:rounded-b-3xl text-right"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                
-                <div className="min-w-0 flex-1 space-y-2.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm font-black text-slate-900">
-                      {s.requestedBook.title}
-                    </span>
-                    
-                    {s.type === "POINTS" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                        <Coins className="h-3 w-3" />
-                        بـ {toArabicNumerals(s.pointsCost)} نقطة
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  {/* غلاف الكتاب المطلوب */}
+                  <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-2xs">
+                    <BookOpen
+                      aria-hidden="true"
+                      className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-slate-300"
+                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/books/${encodeURIComponent(s.requestedBook.id)}/cover?v=${s.requestedBook.updatedAt.getTime()}`}
+                      alt={s.requestedBook.title}
+                      loading="lazy"
+                      className="relative z-10 h-full w-full object-cover"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    {/* العنوان + الشارات */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-black text-slate-900 group-hover:text-teal-700 transition">
+                        {s.requestedBook.title}
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                        <ArrowRightLeft className="h-3 w-3" />
-                        مقابل كتاب
+
+                      {s.type === "POINTS" ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                          <Coins className="h-3 w-3" />
+                          {toArabicNumerals(s.pointsCost)} نقطة
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                          <ArrowRightLeft className="h-3 w-3" />
+                          مقابل كتاب
+                        </span>
+                      )}
+
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-black border ${
+                          s.status === "COMPLETED"
+                            ? "bg-teal-50 text-teal-700 border-teal-200"
+                            : ["CANCELLED", "REJECTED"].includes(s.status)
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : s.status === "DISPUTED"
+                            ? "bg-rose-100 text-rose-800 border-rose-300"
+                            : "bg-slate-100 text-slate-700 border-slate-200"
+                        }`}
+                      >
+                        {s.status === "DISPUTED" && (
+                          <ShieldAlert className="inline h-3 w-3 ml-1" />
+                        )}
+                        {SWAP_STATUS_LABELS[s.status] || s.status}
                       </span>
+                    </div>
+
+                    {/* الكتاب المعروض بالمقابل (إن وجد) */}
+                    {s.type === "DIRECT" && s.offeredBook && (
+                      <p className="truncate text-xs text-slate-500 mt-0.5">
+                        المقابل:{" "}
+                        <span className="font-bold text-slate-700">
+                          {s.offeredBook.title}
+                        </span>
+                      </p>
                     )}
 
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black ${
-                      s.status === "COMPLETED" ? "bg-teal-50 text-teal-700 border border-teal-200" :
-                      ["CANCELLED", "REJECTED"].includes(s.status) ? "bg-rose-50 text-rose-700 border border-rose-200" :
-                      s.status === "DISPUTED" ? "bg-rose-100 text-rose-800 border border-rose-300" :
-                      "bg-slate-100 text-slate-700 border border-slate-200"
-                    }`}>
-                      {s.status === "DISPUTED" && <ShieldAlert className="inline h-3 w-3 ml-1" />}
-                      {SWAP_STATUS_LABELS[s.status] || s.status}
-                    </span>
-                  </div>
+                    {/* الأطراف + التاريخ */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-400">
+                      <span className="inline-flex items-center gap-1 font-bold text-slate-700">
+                        <User className="h-3 w-3 text-teal-600" />
+                        <span>{s.requester.name}</span>
+                      </span>
 
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
-                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-100 px-2 py-1">
-                      <span className="text-slate-400">الطالب:</span>
-                      <Link href={`/users/${s.requester.id}`} className="text-slate-800 hover:text-teal-600 transition">
-                        {s.requester.name}
-                      </Link>
-                    </div>
-                    <span className="text-slate-300">←</span>
-                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-100 px-2 py-1">
-                      <span className="text-slate-400">المالك:</span>
-                      <Link href={`/users/${s.receiver.id}`} className="text-slate-800 hover:text-teal-600 transition">
+                      <span className="text-slate-300">←</span>
+
+                      <span className="font-bold text-slate-700">
                         {s.receiver.name}
-                      </Link>
+                      </span>
+
+                      <span className="text-slate-300">•</span>
+
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatArabicDate(s.createdAt)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 shrink-0 border-t sm:border-0 border-slate-100 pt-3 sm:pt-0 mt-2 sm:mt-0">
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    {formatArabicDate(s.createdAt)}
-                  </span>
-                  
-                  {/* ⋮ زر الإجراءات المنسدل الأنيق */}
-                  <AdminSwapCardActions swapId={s.id} status={s.status} />
-                </div>
-
+                {/* سهم الدخول لتفاصيل الطلب */}
+                <ChevronLeft className="h-4 w-4 shrink-0 text-slate-400 group-hover:-translate-x-1 group-hover:text-teal-600 transition" />
               </div>
-            </article>
+            </Link>
           ))
         ) : (
-          <div className="p-12 text-center text-xs text-slate-400 font-bold">
-            لا توجد طلبات تبادل مطابقة لخيارات البحث.
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
+              <ArrowRightLeft className="h-6 w-6" />
+            </div>
+            <p className="text-xs font-black text-slate-700">
+              لا توجد طلبات مطابقة
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              جرّب تغيير كلمات البحث أو الفلتر المحدد.
+            </p>
           </div>
         )}
       </section>

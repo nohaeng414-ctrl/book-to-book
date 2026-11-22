@@ -1,24 +1,15 @@
 import { auth } from "@/auth";
-import BackButton from "@/components/BackButton";
 import FavoriteButton from "@/components/FavoriteButton";
 import ShareButton from "@/components/ShareButton";
+import BackButton from "@/components/BackButton";
+import FollowButton from "@/components/FollowButton";
+import ReportModal from "@/components/ReportModal";
 import UserAvatar from "@/components/UserAvatar";
 import { prisma } from "@/lib/prisma";
-import {  Star, BookmarkCheck, ShieldCheck, FileText } from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
-import {
-  ArrowLeftRight,
-  ArrowRight,
-  BookOpen,
-  Globe,
-  MapPin,
-  Sparkles,
-  UserCheck,
-  UserPlus,
-} from "lucide-react";
-import { revalidatePath } from "next/cache";
+import { BookOpen, Globe, MapPin, Star } from "lucide-react";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 const categoryLabels: Record<string, string> = {
   NOVELS: "روايات",
@@ -117,80 +108,21 @@ export default async function BookDetailPage({
       })) > 0
     : false;
 
-  // التحقق مما إذا كان المستخدم يتابع صاحب الكتاب (يدعم أشهر تسميات جداول المتابعة في Prisma)
+  // التحقق مما إذا كان المستخدم يتابع صاحب الكتاب
   let isFollowing = false;
   if (currentUser && !isOwner) {
     try {
-      const prismaAny = prisma as Record<string, any>;
-      if (prismaAny.follow) {
-        const count = await prismaAny.follow.count({
-          where: { followerId: currentUser.id, followingId: book.ownerId },
-        });
-        isFollowing = count > 0;
-      } else {
-        const userWithFollow = await prismaAny.user.findFirst({
-          where: {
-            id: currentUser.id,
-            following: { some: { id: book.ownerId } },
-          },
-          select: { id: true },
-        });
-        isFollowing = Boolean(userWithFollow);
-      }
+      const userWithFollow = await prisma.user.findFirst({
+        where: {
+          id: currentUser.id,
+          following: { some: { id: book.ownerId } },
+        },
+        select: { id: true },
+      });
+      isFollowing = Boolean(userWithFollow);
     } catch {
       isFollowing = false;
     }
-  }
-
-  // دالة تنفيذ المتابعة أو إلغائها مباشرة عند الضغط على الزر
-  async function handleFollowToggle() {
-    "use server";
-    const activeSession = await auth();
-    if (!activeSession?.user?.email) {
-      redirect("/login");
-    }
-
-    const viewer = await prisma.user.findUnique({
-      where: { email: activeSession.user.email },
-      select: { id: true },
-    });
-
-    if (!viewer || viewer.id === book?.ownerId) return;
-
-    const prismaAny = prisma as Record<string, any>;
-    try {
-      if (prismaAny.follow) {
-        const existing = await prismaAny.follow.findFirst({
-          where: { followerId: viewer.id, followingId: book!.ownerId },
-        });
-        if (existing) {
-          await prismaAny.follow.delete({ where: { id: existing.id } });
-        } else {
-          await prismaAny.follow.create({
-            data: { followerId: viewer.id, followingId: book!.ownerId },
-          });
-        }
-      } else {
-        const existing = await prismaAny.user.findFirst({
-          where: {
-            id: viewer.id,
-            following: { some: { id: book!.ownerId } },
-          },
-        });
-        await prismaAny.user.update({
-          where: { id: viewer.id },
-          data: {
-            following: existing
-              ? { disconnect: { id: book!.ownerId } }
-              : { connect: { id: book!.ownerId } },
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Follow toggle error:", error);
-    }
-
-    revalidatePath(`/books/${id}`);
   }
 
   const location = [book.owner.city, book.owner.country]
@@ -203,17 +135,23 @@ export default async function BookDetailPage({
       className="mx-auto w-full max-w-3xl space-y-4 px-3 pt-0 pb-28 text-slate-900 sm:px-4"
     >
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white/95 px-3 backdrop-blur-sm">
-         <Link
-          href="/profile"
-          title="رجوع"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
-        >
-          <ArrowRight className="h-5 w-5" />
-        </Link>
-        <h1 className="pointer-events-none absolute inset-x-12 truncate text-center text-sm font-black sm:text-base">
+        <div className="shrink-0 z-10">
+          <BackButton />
+        </div>
+
+        <h1 className="pointer-events-none absolute inset-x-28 truncate text-center text-sm font-black sm:text-base">
           تفاصيل الكتاب
         </h1>
-        <div className="flex items-center gap-2">
+
+        <div className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+          {!isOwner && currentUser && (
+  <ReportModal
+    reportedUserId={book.owner.id}
+    reportedUserName={book.owner.name}
+    bookTitle={book.title}
+    currentUserId={currentUser.id}
+  />
+)}
           <ShareButton title={book.title} />
           <FavoriteButton
             bookId={book.id}
@@ -260,40 +198,38 @@ export default async function BookDetailPage({
               </p>
             )}
 
-      {/* شريط مواصفات احترافي بدون خط فاصل */}
-<div className="mt-5 grid grid-cols-2 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/90 via-white to-slate-50/50 p-2.5 shadow-2xs">
-  
-  {/* العنصر الأول: حالة الكتاب */}
-  <div className="flex items-center gap-3.5 px-3 py-2">
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100 shadow-2xs">
-      <Star className="h-5 w-5 " />
-    </div>
-    <div className="min-w-0 text-right">
-      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-        حالة الكتاب
-      </span>
-      <span className="block truncate text-xs font-black text-slate-900 sm:text-sm">
-        {conditionLabels[book.condition ?? ""] ?? "غير محددة"}
-      </span>
-    </div>
-  </div>
+            {/* شريط مواصفات احترافي بدون خط فاصل */}
+            <div className="mt-5 grid grid-cols-2 rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/90 via-white to-slate-50/50 p-2.5 shadow-2xs">
+              {/* العنصر الأول: حالة الكتاب */}
+              <div className="flex items-center gap-3.5 px-3 py-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100 shadow-2xs">
+                  <Star className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 text-right">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    حالة الكتاب
+                  </span>
+                  <span className="block truncate text-xs font-black text-slate-900 sm:text-sm">
+                    {conditionLabels[book.condition ?? ""] ?? "غير محددة"}
+                  </span>
+                </div>
+              </div>
 
-  {/* العنصر الثاني: اللغة */}
-  <div className="flex items-center gap-3.5 px-3 py-2">
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 ring-1 ring-sky-100 shadow-2xs">
-      <Globe className="h-5 w-5" />
-    </div>
-    <div className="min-w-0 text-right">
-      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-        لغة الكتاب
-      </span>
-      <span className="block truncate text-xs font-black text-slate-900 sm:text-sm">
-        {formatLanguage(book.language)}
-      </span>
-    </div>
-  </div>
-
-</div>
+              {/* العنصر الثاني: اللغة */}
+              <div className="flex items-center gap-3.5 px-3 py-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 ring-1 ring-sky-100 shadow-2xs">
+                  <Globe className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 text-right">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    لغة الكتاب
+                  </span>
+                  <span className="block truncate text-xs font-black text-slate-900 sm:text-sm">
+                    {formatLanguage(book.language)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* بطاقة صاحب الكتاب مع زر متابعة تفاعلي */}
             <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-100 p-3 transition hover:border-slate-200">
@@ -315,29 +251,14 @@ export default async function BookDetailPage({
                 </div>
               </Link>
 
-              {!isOwner && (
-                <form action={handleFollowToggle}>
-                  <button
-                    type="submit"
-                    className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition active:scale-95 ${
-                      isFollowing
-                        ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        : "bg-teal-50 text-teal-800 hover:bg-teal-100"
-                    }`}
-                  >
-                    {isFollowing ? (
-                      <>
-                        <UserCheck className="h-3.5 w-3.5 text-teal-700" />
-                        <span>متابَع</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-3.5 w-3.5" />
-                        <span>متابعة</span>
-                      </>
-                    )}
-                  </button>
-                </form>
+              {!isOwner && currentUser && (
+                <div className="shrink-0">
+                  <FollowButton
+                    targetUserId={book.owner.id}
+                    initialIsFollowing={isFollowing}
+                    currentUserId={currentUser.id}
+                  />
+                </div>
               )}
             </div>
 
@@ -350,14 +271,12 @@ export default async function BookDetailPage({
                   تعديل بيانات الكتاب
                 </Link>
               ) : book.isAvailable ? (
-               <Link
-  href={session?.user ? `/swap/request?bookId=${book.id}` : "/login"}
-  className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-4 py-3 text-sm font-black text-white transition hover:bg-brand-primary-hover active:scale-[0.98]"
->
-  طلب الكتاب
-</Link>
-
-                 
+                <Link
+                  href={session?.user ? `/swap/request?bookId=${book.id}` : "/login"}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-4 py-3 text-sm font-black text-white transition hover:bg-brand-primary-hover active:scale-[0.98]"
+                >
+                  طلب الكتاب
+                </Link>
               ) : (
                 <p className="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-600">
                   هذا الكتاب غير متاح للتبادل حالياً.

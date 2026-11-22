@@ -1,15 +1,12 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  ShieldCheck,
   User,
   MapPin,
   BookOpen,
   MessageSquare,
   Lock,
   UserCheck,
-  CalendarClock,
-  CheckCircle2,
 } from "lucide-react";
 
 export const metadata = {
@@ -65,12 +62,6 @@ const PRIVACY_SECTIONS = [
     description:
       "لك كامل الحق في تعديل بياناتك الشخصية، وتحديث دولتك ومدينتك، وحذف كتبك المعروضة في أي وقت من خلال إعدادات حسابك، كما يمكنك طلب حذف حسابك وبياناتك نهائياً بالتواصل مع إدارة المنصة.",
   },
-];
-
-const TRUST_HIGHLIGHTS = [
-  "لا نبيع بياناتك لأي جهة",
-  "تشفير كامل لكلمات المرور",
-  "التواصل آمن داخل المنصة",
 ];
 
 export default function PrivacyPage() {

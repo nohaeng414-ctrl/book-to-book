@@ -9,19 +9,21 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("جاري التحقق من رابط تفعيل البريد الإلكتروني...");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    token ? "loading" : "error"
+  );
+  const [message, setMessage] = useState(
+    token
+      ? "جاري التحقق من رابط تفعيل البريد الإلكتروني..."
+      : "رابط التفعيل غير مكتمل أو غير صالح. يرجى التحقق من الرابط المرسل إلى بريدك."
+  );
   const attemptedRef = useRef(false);
 
   useEffect(() => {
     if (attemptedRef.current) return;
     attemptedRef.current = true;
 
-    if (!token) {
-      setStatus("error");
-      setMessage("رابط التفعيل غير مكتمل أو غير صالح. يرجى التحقق من الرابط المرسل إلى بريدك.");
-      return;
-    }
+    if (!token) return;
 
     const verify = async () => {
       try {

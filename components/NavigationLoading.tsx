@@ -6,6 +6,10 @@ import { LoaderCircle } from "lucide-react";
 
 export default function NavigationLoading() {
   const pathname = usePathname();
+  return <NavigationLoadingIndicator key={pathname} pathname={pathname} />;
+}
+
+function NavigationLoadingIndicator({ pathname }: { pathname: string }) {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const pending = pendingPath === pathname;
 

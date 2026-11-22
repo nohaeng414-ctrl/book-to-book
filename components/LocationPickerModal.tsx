@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import type { Map as LeafletMap } from "leaflet";
 import {
   MapPin,
   X,
   Search,
   Crosshair,
   Loader2,
-  Check,
 } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
@@ -26,9 +26,13 @@ export default function LocationPickerModal({
   onConfirm,
 }: LocationPickerModalProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
     lat: DEFAULT_CENTER[0],
     lng: DEFAULT_CENTER[1],
@@ -39,10 +43,6 @@ export default function LocationPickerModal({
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // منع تمرير الصفحة الخلفية أثناء فتح النافذة
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function LocationPickerModal({
       if (!isMounted || !mapContainerRef.current || mapInstanceRef.current) return;
 
       const map = L.map(mapContainerRef.current, {
-        center: [coords.lat, coords.lng],
+        center: DEFAULT_CENTER,
         zoom: 14,
         zoomControl: false,
       });

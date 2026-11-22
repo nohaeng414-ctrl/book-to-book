@@ -215,6 +215,14 @@ export default async function Home({
     query: searchQuery,
     excludeOwnerId: currentUserId,
   });
+  const categoryWhere = buildAvailableBookWhere({
+    condition: selectedCondition,
+    city: selectedCity,
+    language: selectedLanguage,
+    points: selectedPointsNumber,
+    query: searchQuery,
+    excludeOwnerId: currentUserId,
+  });
   const totalBooks = await prisma.book.count({ where: catalogWhere });
   const pageCount = Math.max(1, Math.ceil(totalBooks / BOOKS_PER_PAGE));
   const page = Number.isFinite(requestedPage) ? Math.max(1, Math.min(requestedPage, pageCount)) : 1;
@@ -232,7 +240,7 @@ export default async function Home({
     }),
     prisma.user.findMany({ where: { city: { not: "" } }, select: { city: true }, distinct: ["city"], orderBy: { city: "asc" } }),
     prisma.book.findMany({ where: { isAvailable: true, isDeleted: false }, select: { language: true }, distinct: ["language"], orderBy: { language: "asc" } }),
-    prisma.book.groupBy({ by: ["category"], where: catalogWhere, _count: { _all: true } }),
+    prisma.book.groupBy({ by: ["category"], where: categoryWhere, _count: { _all: true } }),
   ]);
 
   const isEnglish = searchQuery ? /^[a-zA-Z\s]+$/.test(searchQuery) : false;
@@ -273,7 +281,12 @@ export default async function Home({
 
   const cityOptions = cities.map((item) => item.city).filter(Boolean);
   const languageOptions = languages.map((item) => item.language).filter(Boolean);
-  const categories = [...new Set([...Object.keys(categoryMap), ...allBooks.map((book) => book.category)])];
+  const availableCategories = new Set(
+    categoryCounts.filter((item) => item._count._all > 0).map((item) => item.category)
+  );
+  const categories = Object.keys(categoryMap).filter((category) =>
+    availableCategories.has(category as BookCategory)
+  );
   const categoryCountMap = new Map(categoryCounts.map((item) => [item.category, item._count._all]));
 
   const displayBooks = allBooks
@@ -300,7 +313,8 @@ export default async function Home({
     query.delete("page");
     if (category) query.set("category", category);
     else query.delete("category");
-    return query.size ? `/?${query.toString()}#categories` : "/#categories";
+    const anchor = category ? "#books" : "#categories";
+    return query.size ? `/?${query.toString()}${anchor}` : `/${anchor}`;
   };
   const pageHref = (targetPage: number) => {
     const query = new URLSearchParams(filters);
