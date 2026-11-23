@@ -183,7 +183,7 @@ export default function AdminUserCardActions({
                   <div className="flex items-center gap-2 text-amber-600 min-w-0">
                     <ShieldAlert className="h-5 w-5 shrink-0" />
                     <h3 className="text-sm font-black text-slate-900 truncate">
-                      حظر حساب {userName}
+                      حظر الحساب
                     </h3>
                   </div>
                   <button
@@ -536,7 +536,7 @@ export default function AdminUserCardActions({
           className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 px-3 py-1.5 text-xs font-bold text-slate-700 transition cursor-pointer"
         >
           <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-          <span>إدارة الكتب ({toArabicNumerals(books.length)})</span>
+          <span>إدارة الكتب </span>
         </button>
   {/* زر الحظر / فك الحظر */}
         {isBanned ? (

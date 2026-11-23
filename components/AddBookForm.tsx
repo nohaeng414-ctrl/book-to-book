@@ -51,7 +51,7 @@ export default function AddBookForm({ action, error }: { action: (formData: Form
               type="text"
               name="title"
               required
-              placeholder="مثال: قواعد العشق الأربعون"
+              placeholder="عنوان الكتاب..."
               className="w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-xs font-medium text-[#0F172A] placeholder-[#94A3B8] shadow-2xs focus:border-[#1E293B] focus:outline-none transition"
             />
           </div>
@@ -62,7 +62,7 @@ export default function AddBookForm({ action, error }: { action: (formData: Form
             <input
               type="text"
               name="author"
-              placeholder="مثال: أليف شافاق"
+              placeholder="اسم المؤلف..."
               className="w-full rounded-xl border border-[#CBD5E1] bg-white px-3.5 py-2.5 text-xs font-medium text-[#0F172A] placeholder-[#94A3B8] shadow-2xs focus:border-[#1E293B] focus:outline-none transition"
             />
           </div>

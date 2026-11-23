@@ -481,7 +481,7 @@ export default function SelectBookModal({
                             {book.title}
                           </span>
                           <span className="block truncate text-[11px] text-slate-500">
-                            {book.author || "مؤلف غير محدد"}
+                            {book.author || ""}
                           </span>
                           <span className="block text-[10px] font-bold text-teal-700">
                             {toArabicNumerals(book.points)} نقاط

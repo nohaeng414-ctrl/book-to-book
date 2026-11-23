@@ -109,7 +109,6 @@ export default async function UserBooksPage({
 
   return (
     <main dir="rtl" className="mx-auto w-full max-w-4xl space-y-6 px-3 sm:px-4 py-6 text-[#0F172A] pb-28">
-      {/* 🧭 الهيدر القياسي المتناسق */}
       <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
         <Link
           href={`/users/${targetUser.id}`}

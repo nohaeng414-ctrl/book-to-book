@@ -260,14 +260,7 @@ export default function ConfirmReceiptModal({
                 {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 <span>تأكيد الآن</span>
               </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handleClose}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                إلغاء
-              </button>
+             
             </div>
           </div>
         </div>

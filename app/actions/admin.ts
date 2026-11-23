@@ -408,7 +408,7 @@ export async function adminToggleBanUserAction(
   try {
     const admin = await requireAdminUser();
     if (targetUserId === admin.id) {
-      return { error: "لا يمكنك حظر حساب المشرف الخاص بك." };
+      return { error: "لا يمكنك حظر حساب المشرف." };
     }
 
     const target = await prisma.user.findUnique({

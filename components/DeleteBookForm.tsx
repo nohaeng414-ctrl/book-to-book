@@ -96,13 +96,7 @@ export default function DeleteBookForm({
           </p>
 
           <form action={action} className="mt-5 grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(false)}
-              className="rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-xs font-bold text-[#334155] transition hover:bg-[#F8FAFC] active:scale-95"
-            >
-              إلغاء
-            </button>
+           
             <PendingSubmitButton
               pendingText="جارٍ الحذف..."
               className="rounded-xl bg-red-600 px-3 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700 active:scale-95"

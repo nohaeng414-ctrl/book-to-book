@@ -203,8 +203,8 @@ export default function AdminReportCardActions({
           )}
           <span>
             {isUserBanned
-              ? `فك الحظر${reportedUserName ? ` عن ${reportedUserName}` : ""}`
-              : `حظر حساب${reportedUserName ? ` ${reportedUserName}` : " المشتكى عليه"}`}
+              ? `فك الحظر`
+              : `حظر الحساب`}
           </span>
         </button>
       </div>

@@ -166,8 +166,10 @@ export default async function RequestsPage({
   });
 
   if (!user) redirect("/login");
-  const activeTab = params.tab === "outgoing" ? "outgoing" : "incoming";
-
+const activeTab =
+    params.tab === "outgoing" || Boolean(params.created)
+      ? "outgoing"
+      : "incoming";
   async function hideCancelledSwap(formData: FormData) {
     "use server";
     const currentSession = await auth();
@@ -359,12 +361,7 @@ export default async function RequestsPage({
       dir="rtl"
       className="mx-auto w-full max-w-2xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* الهيدر الموحّد */}
-      <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-center rounded-b-2xl border-x border-b border-slate-200 bg-white px-4 shadow-2xs">
-        <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
-          طلبات التبادل
-        </h1>
-      </header>
+   
 
       {/* رسائل التنبيه والحالة */}
       {params.created && (

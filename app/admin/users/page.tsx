@@ -108,8 +108,7 @@ export default async function AdminUsersPage({
       dir="rtl"
       className="mx-auto w-full max-w-4xl space-y-4 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر التنفيذي الموحّد */}
-      <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-5 sm:p-6 text-white shadow-lg">
+      <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-6 text-white shadow-lg">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-20 -left-20 h-56 w-56 rounded-full bg-teal-500/15 blur-3xl"
@@ -119,17 +118,12 @@ export default async function AdminUsersPage({
           className="pointer-events-none absolute -bottom-24 -right-16 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl"
         />
 
-        <div className="relative z-30 flex items-center justify-between gap-3">
-          <div className="shrink-0">
-            <BackButton className="!h-auto !w-auto !rounded-none !border-0 !bg-transparent !p-1.5 !backdrop-blur-none text-slate-200 hover:!bg-transparent hover:text-white active:scale-95 [&_svg]:text-slate-200" />
-          </div>
-          <div className="shrink-0">
-            <AdminBroadcastModal />
-          </div>
+        <div className="absolute top-4 right-4 z-20">
+          <BackButton className="!h-auto !w-auto !rounded-none !border-0 !bg-transparent !p-1.5 !backdrop-blur-none text-slate-200 hover:!bg-transparent hover:text-white active:scale-95 [&_svg]:text-slate-200" />
         </div>
 
-        <div className="relative z-10 mt-1 flex flex-col items-center w-full text-center">
-          <div className="mb-2.5 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-teal-400 ring-1 ring-white/15">
+        <div className="relative z-10 flex flex-col items-center w-full text-center pt-2">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-teal-400 ring-1 ring-white/15">
             <Users className="h-5 w-5 stroke-[1.75]" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
@@ -138,15 +132,15 @@ export default async function AdminUsersPage({
           <p className="mt-1 text-xs text-slate-300">
             متابعة حسابات القراء، أرصدة النقاط، المكتبات، وإجراءات الحظر والتنبيه
           </p>
-
-         
         </div>
       </header>
+      
 
-      {/* 🔍 شريط الفلترة والبحث */}
+    {/* 🔍 شريط الفلترة والبحث */}
       <div className="space-y-2.5 rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-2xs">
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-center text-xs font-bold">
           <Link
+            replace
             href={`/admin/users?status=ALL${
               searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""
             }`}
@@ -160,6 +154,7 @@ export default async function AdminUsersPage({
           </Link>
 
           <Link
+            replace
             href={`/admin/users?status=ACTIVE${
               searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""
             }`}
@@ -174,6 +169,7 @@ export default async function AdminUsersPage({
           </Link>
 
           <Link
+            replace
             href={`/admin/users?status=BANNED${
               searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""
             }`}
@@ -205,6 +201,7 @@ export default async function AdminUsersPage({
             />
             {searchQuery && (
               <Link
+                replace
                 href={`/admin/users?status=${validStatus}`}
                 title="مسح البحث"
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"

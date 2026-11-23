@@ -275,7 +275,7 @@ export default async function BookDetailPage({
                   href={session?.user ? `/swap/request?bookId=${book.id}` : "/login"}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-4 py-3 text-sm font-black text-white transition hover:bg-brand-primary-hover active:scale-[0.98]"
                 >
-                  طلب الكتاب
+                  اطلب الكتاب
                 </Link>
               ) : (
                 <p className="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-600">

@@ -125,13 +125,7 @@ export default function AdminBroadcastModal() {
                     )}
                     <span>{loading ? "جاري الإرسال..." : "إرسال للجميع الآن"}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="rounded-xl bg-slate-100 hover:bg-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 cursor-pointer"
-                  >
-                    إلغاء
-                  </button>
+                  
                 </div>
               </form>
             )}

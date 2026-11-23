@@ -117,7 +117,6 @@ export default async function AdminSwapsPage({
       dir="rtl"
       className="mx-auto w-full max-w-4xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر التنفيذي الموحّد */}
       <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-6 text-white shadow-lg">
         <div
           aria-hidden="true"
@@ -166,6 +165,7 @@ export default async function AdminSwapsPage({
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-2xs">
         <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-center text-xs font-bold md:w-[25rem] shrink-0">
           <Link
+            replace
             href={`/admin/swaps?status=ALL${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
               validStatus === "ALL"
@@ -177,6 +177,7 @@ export default async function AdminSwapsPage({
           </Link>
 
           <Link
+            replace
             href={`/admin/swaps?status=ACTIVE${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
               validStatus === "ACTIVE"
@@ -189,6 +190,7 @@ export default async function AdminSwapsPage({
           </Link>
 
           <Link
+            replace
             href={`/admin/swaps?status=COMPLETED${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
               validStatus === "COMPLETED"
@@ -201,6 +203,7 @@ export default async function AdminSwapsPage({
           </Link>
 
           <Link
+            replace
             href={`/admin/swaps?status=CANCELLED${searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""}`}
             className={`rounded-lg py-2 transition flex items-center justify-center gap-1 ${
               validStatus === "CANCELLED"
@@ -230,6 +233,7 @@ export default async function AdminSwapsPage({
             />
             {searchQuery && (
               <Link
+                replace
                 href={`/admin/swaps?status=${validStatus}`}
                 title="مسح البحث"
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -320,8 +324,8 @@ export default async function AdminSwapsPage({
                       </p>
                     )}
 
-                    {/* الأطراف + التاريخ */}
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-400">
+                    {/* الأطراف */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400">
                       <span className="inline-flex items-center gap-1 font-bold text-slate-700">
                         <User className="h-3 w-3 text-teal-600" />
                         <span>{s.requester.name}</span>
@@ -332,13 +336,12 @@ export default async function AdminSwapsPage({
                       <span className="font-bold text-slate-700">
                         {s.receiver.name}
                       </span>
+                    </div>
 
-                      <span className="text-slate-300">•</span>
-
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatArabicDate(s.createdAt)}
-                      </span>
+                    {/* التاريخ بسطر مستقل */}
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatArabicDate(s.createdAt)}</span>
                     </div>
                   </div>
                 </div>

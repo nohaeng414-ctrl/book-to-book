@@ -22,7 +22,7 @@ function buildReadyWarningText(
 
   if (context === "BOOK") {
     if (reportReason?.includes("غلاف")) {
-      return `يرجى تعديل صورة غلاف كتابك${bookRef} لتكون واضحة ومناسبة لسياسات المنصة.`;
+      return `يرجى تعديل صورة غلاف كتابك${bookRef} لتكون واضحة.`;
     }
     if (reportReason?.includes("بيانات")) {
       return `يرجى مراجعة وتصحيح بيانات كتابك${bookRef} لتكون دقيقة ومطابقة للواقع.`;

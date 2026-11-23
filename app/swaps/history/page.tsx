@@ -1,6 +1,14 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ArrowRight, BookOpen, Coins, Repeat } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  Coins,
+  Repeat,
+} from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -33,65 +41,175 @@ export default async function SwapHistoryPage() {
   const dateFormatter = new Intl.DateTimeFormat("ar", { dateStyle: "medium" });
 
   return (
-    <main dir="rtl" className="mx-auto max-w-3xl space-y-6 px-4 py-8 text-[#0F172A]">
-      <header className="flex items-center gap-3">
-        <Link href="/profile" aria-label="العودة إلى الحساب" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F8FAFC]">
-          <ArrowRight className="h-4 w-4" />
+    <main
+      dir="rtl"
+      className="mx-auto w-full max-w-3xl space-y-6 px-3 sm:px-4 py-6 pb-24 text-[#0F172A]"
+    >
+      {/* شريط الرجوع للبروفايل مطابق لصفحة الإعدادات */}
+      <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
+        <Link
+          href="/profile"
+          title="رجوع"
+          aria-label="العودة إلى الحساب"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+        >
+          <ArrowRight className="h-5 w-5" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-extrabold">سجل التبادل</h1>
-          <p className="mt-1 text-sm text-[#64748B]">الكتب والنقاط في عملياتك المكتملة.</p>
-        </div>
+        <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
+          سجل التبادل
+        </h1>
+        <div className="w-10" aria-hidden="true" />
       </header>
 
+      {/* بطاقة ملخص سريعة بنفس روح بطاقة الإعدادات */}
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 border border-teal-100">
+            <ArrowRightLeft className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-900">
+              العمليات المكتملة
+            </p>
+            <p className="truncate text-xs text-slate-400">
+              الكتب والنقاط في عملياتك التي تم تأكيد استلامها
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-700">
+          {swaps.length}
+        </span>
+      </div>
+
       {swaps.length === 0 ? (
-        <section className="rounded-3xl border border-dashed border-[#CBD5E1] bg-white px-5 py-14 text-center">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#F1F5F9] text-[#64748B]"><BookOpen className="h-6 w-6" /></span>
-          <h2 className="mt-4 text-base font-extrabold">لا توجد عمليات مكتملة بعد</h2>
-          <p className="mt-1 text-sm text-[#64748B]">ستظهر هنا الكتب والنقاط بعد تأكيد الاستلام.</p>
-          <Link href="/" className="mt-5 inline-flex rounded-xl bg-[#1E293B] px-5 py-3 text-sm font-bold text-white hover:bg-[#334155]">اكتشف الكتب</Link>
+        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center shadow-2xs">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-500">
+            <BookOpen className="h-5 w-5" />
+          </span>
+          <h2 className="mt-3 text-sm font-extrabold text-slate-900">
+            لا توجد عمليات مكتملة بعد
+          </h2>
+          <p className="mt-1 text-xs text-slate-400">
+            ستظهر هنا الكتب والنقاط بعد تأكيد الاستلام.
+          </p>
+          <Link
+            href="/"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-95"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>اكتشف الكتب</span>
+          </Link>
         </section>
       ) : (
-        <section className="space-y-3" aria-label="العمليات المكتملة">
-          {swaps.map((swap) => {
-            const isRequester = swap.requesterId === user.id;
-            const pointsChange = swap.pointTransactions.reduce((total, transaction) => total + transaction.amount, 0);
+        <section
+          aria-label="العمليات المكتملة"
+          className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xs"
+        >
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              تفاصيل العمليات
+            </h2>
+          </div>
 
-            return (
-              <article key={swap.id} className="rounded-3xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#F1F5F9] text-[#334155]">
-                      {swap.type === "POINTS" ? <Coins className="h-5 w-5" /> : <Repeat className="h-5 w-5" />}
-                    </span>
-                    <div>
-                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">اكتملت العملية</span>
-                      <h2 className="mt-2 text-base font-extrabold">
-                        {swap.type === "POINTS"
-                          ? isRequester ? `اقتنيت: ${swap.requestedBook.title}` : `تم بيع: ${swap.requestedBook.title}`
-                          : isRequester
-                            ? `استلمت ${swap.requestedBook.title} وقدّمت ${swap.offeredBook?.title ?? "كتاباً"}`
-                            : `استلمت ${swap.offeredBook?.title ?? "كتاباً"} وقدّمت ${swap.requestedBook.title}`}
-                      </h2>
+          <div className="divide-y divide-slate-100">
+            {swaps.map((swap) => {
+              const isRequester = swap.requesterId === user.id;
+              const pointsChange = swap.pointTransactions.reduce(
+                (total, transaction) => total + transaction.amount,
+                0
+              );
+
+              return (
+                <article
+                  key={swap.id}
+                  className="p-4 transition hover:bg-slate-50/60 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-600">
+                        {swap.type === "POINTS" ? (
+                          <Coins className="h-4 w-4 text-amber-600" />
+                        ) : (
+                          <Repeat className="h-4 w-4 text-teal-600" />
+                        )}
+                      </span>
+
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>اكتملت العملية</span>
+                          </span>
+
+                          {swap.completedAt && (
+                            <time
+                              dateTime={swap.completedAt.toISOString()}
+                              className="text-[11px] font-medium text-slate-400"
+                            >
+                              {dateFormatter.format(swap.completedAt)}
+                            </time>
+                          )}
+                        </div>
+
+                        <h3 className="mt-1.5 text-xs sm:text-sm font-bold leading-snug text-slate-900">
+                          {swap.type === "POINTS"
+                            ? isRequester
+                              ? `اقتنيت: ${swap.requestedBook.title}`
+                              : `تم بيع: ${swap.requestedBook.title}`
+                            : isRequester
+                            ? `استلمت ${swap.requestedBook.title} وقدّمت ${
+                                swap.offeredBook?.title ?? "كتاباً"
+                              }`
+                            : `استلمت ${
+                                swap.offeredBook?.title ?? "كتاباً"
+                              } وقدّمت ${swap.requestedBook.title}`}
+                        </h3>
+                      </div>
                     </div>
                   </div>
-                  {swap.completedAt && <time dateTime={swap.completedAt.toISOString()} className="text-xs text-[#64748B]">{dateFormatter.format(swap.completedAt)}</time>}
-                </div>
 
-                {swap.type === "POINTS" && (
-                  <p className={`mt-4 flex items-center gap-2 rounded-xl p-3 text-sm font-bold ${pointsChange >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
-                    <Coins className="h-4 w-4" />
-                    {pointsChange >= 0 ? `أضيفت ${pointsChange} نقطة إلى رصيدك` : `استُخدمت ${Math.abs(pointsChange)} نقطة`}
-                  </p>
-                )}
+                  {swap.type === "POINTS" && (
+                    <div
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                        pointsChange >= 0
+                          ? "border-emerald-200/70 bg-emerald-50/70 text-emerald-700"
+                          : "border-amber-200/70 bg-amber-50/70 text-amber-800"
+                      }`}
+                    >
+                      <Coins className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {pointsChange >= 0
+                          ? `أضيفت ${pointsChange} نقطة إلى رصيدك`
+                          : `استُخدمت ${Math.abs(pointsChange)} نقطة`}
+                      </span>
+                    </div>
+                  )}
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link href={`/books/${swap.requestedBook.id}`} className="rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-bold text-[#334155] hover:bg-[#F8FAFC]">{swap.requestedBook.title}</Link>
-                  {swap.offeredBook && <Link href={`/books/${swap.offeredBook.id}`} className="rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-bold text-[#334155] hover:bg-[#F8FAFC]">{swap.offeredBook.title}</Link>}
-                </div>
-              </article>
-            );
-          })}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/books/${swap.requestedBook.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <BookOpen className="h-3.5 w-3.5 text-slate-500" />
+                      <span>{swap.requestedBook.title}</span>
+                      <ChevronLeft className="h-3.5 w-3.5 text-slate-400" />
+                    </Link>
+
+                    {swap.offeredBook && (
+                      <Link
+                        href={`/books/${swap.offeredBook.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                      >
+                        <BookOpen className="h-3.5 w-3.5 text-slate-500" />
+                        <span>{swap.offeredBook.title}</span>
+                        <ChevronLeft className="h-3.5 w-3.5 text-slate-400" />
+                      </Link>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </section>
       )}
     </main>

@@ -75,7 +75,6 @@ export default async function AdminDashboardPage() {
       dir="rtl"
       className="mx-auto w-full max-w-4xl space-y-6 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر التنفيذي العصري */}
       <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-6 text-white shadow-lg">
         {/* إضاءة خلفية ناعمة */}
         <div

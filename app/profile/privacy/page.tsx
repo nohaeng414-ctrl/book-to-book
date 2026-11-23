@@ -70,7 +70,6 @@ export default function PrivacyPage() {
       dir="rtl"
       className="mx-auto w-full max-w-2xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* الهيدر الموحّد */}
       <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
         <Link
           href="/settings"

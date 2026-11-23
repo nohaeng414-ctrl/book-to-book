@@ -332,6 +332,12 @@ export default async function Home({
   const isFilteredView = Boolean(
     searchQuery || selectedCategory || activeFiltersCount > 0 || sortOrder !== "newest"
   );
+  const myBooksCount =
+    displayBooks.length === 0 && !isFilteredView && currentUserId
+      ? await prisma.book.count({
+          where: { ownerId: currentUserId, isDeleted: false },
+        })
+      : 0;
 
   return (
     <div id="top" className="w-full pb-10">
@@ -604,17 +610,55 @@ export default async function Home({
 
       {/* 📚 عرض الكتب حسب الفئات */}
       <section id="books" className="w-full px-4 pb-6 sm:px-6">
-        {displayBooks.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-[#CBD5E1] bg-white px-5 py-14 text-center">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#F1F5F9] text-[#64748B]">
-              <BookIcon />
-            </span>
-            <p className="mt-2 text-sm text-[#64748B]">
-              {isFilteredView
-                ? "لم نتمكن من العثور على أي كتاب يطابق بحثك أو معايير التصفية."
-                : "الرفوف هادئة هنا.. كن أول من يضيف كتاباً!"}
-            </p>
-          </div>
+       {displayBooks.length === 0 ? (
+          !isFilteredView && myBooksCount > 0 ? (
+            <div className="rounded-3xl border border-teal-200/80 bg-white px-5 py-12 text-center shadow-2xs">
+              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-teal-50 text-teal-600 border border-teal-100">
+                <BookIcon />
+              </span>
+              <h2 className="mt-3 text-base font-extrabold text-[#0F172A]">
+                {myBooksCount === 1
+                  ? "كتابك صار على الرف!"
+                  : "كتبك صارت على الرف!"}
+              </h2>
+              <p className="mx-auto mt-1.5 max-w-sm text-xs sm:text-sm leading-relaxed text-[#64748B]">
+                بانتظار انضمام قرّاء آخرين لتبدأ رحلة التبادل. يمكنك متابعة أو تعديل ما أضفته من مكتبتك.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+                <Link
+                  href="/my-books"
+                  className="inline-flex items-center justify-center rounded-xl bg-brand-primary hover:bg-brand-primary-hover px-4 py-2.5 text-xs font-bold text-white transition active:scale-95"
+                >
+                كتبي 
+                </Link>
+                <Link
+                  href="/add-book"
+                  className="inline-flex items-center justify-center rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] hover:bg-slate-100 px-4 py-2.5 text-xs font-bold text-[#334155] transition active:scale-95"
+                >
+                  إضافة كتاب جديد
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-dashed border-[#CBD5E1] bg-white px-5 py-14 text-center">
+              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#F1F5F9] text-[#64748B]">
+                <BookIcon />
+              </span>
+              <p className="mt-3 text-sm font-medium text-[#64748B]">
+                {isFilteredView
+                  ? "لم نتمكن من العثور على أي كتاب يطابق بحثك أو معايير التصفية."
+                  : "الرفوف هادئة هنا.. كن أول من يضيف كتاباً!"}
+              </p>
+              {!isFilteredView && (
+                <Link
+                  href="/add-book"
+                  className="mt-4 inline-flex items-center justify-center rounded-xl bg-brand-primary hover:bg-brand-primary-hover px-5 py-2.5 text-xs font-bold text-white transition active:scale-95"
+                >
+                  أضف كتابك الأول
+                </Link>
+              )}
+            </div>
+          )
         ) : (
           <div className="space-y-8">
             {(selectedCategory ? [selectedCategory] : categories).map((category) => {

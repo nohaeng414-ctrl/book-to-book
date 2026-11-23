@@ -184,7 +184,7 @@ export const englishTranslations: Record<string, string> = {
   "مالك الكتاب": "Book owner",
   "الكاتب:": "Author:",
   "قيمة التبادل": "Exchange value",
-  "طلب الكتاب من": "Request a book from",
+  "اطلب الكتاب من": "Request a book from",
   "ستظهر الكتب التالية للطرف الآخر ليختار كتاباً واحداً منها:": "The other person can choose one of the following books you offer:",
   "الكتب التي عرضها صاحب الطلب:": "Books offered by the requester:",
   "الكتب المعروضة:": "Offered books:",

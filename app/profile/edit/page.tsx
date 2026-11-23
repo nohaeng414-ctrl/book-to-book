@@ -141,10 +141,7 @@ export default async function EditProfilePage({
                 <AtSign className="h-3.5 w-3.5 text-slate-400" />
                 البريد الإلكتروني
               </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
-                <Lock className="h-3 w-3" />
-                غير قابل للتعديل
-              </span>
+            
             </label>
             <input
               id="email"

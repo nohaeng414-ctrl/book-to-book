@@ -75,7 +75,6 @@ export default async function AdminBooksPage({
       dir="rtl"
       className="mx-auto w-full max-w-4xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر التنفيذي الموحّد */}
       <header className="relative overflow-hidden rounded-3xl border border-slate-700/60 bg-gradient-to-br from-[#0B1120] via-[#1E293B] to-[#0F172A] p-6 text-white shadow-lg">
         <div
           aria-hidden="true"
@@ -196,7 +195,7 @@ export default async function AdminBooksPage({
                     </div>
 
                     <p className="truncate text-xs text-slate-500 mt-0.5">
-                      {b.author || "مؤلف غير محدد"}
+                      {b.author || ""}
                     </p>
 
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">

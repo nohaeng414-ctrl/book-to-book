@@ -136,7 +136,7 @@ export default async function SwapRequestPage({
         </div>
 
         <h1 className="absolute inset-x-0 text-center text-sm sm:text-base font-black text-slate-900 pointer-events-none">
-          طلب الكتاب
+          اطلب الكتاب
         </h1>
 
         <div className="w-8 shrink-0" />

@@ -236,10 +236,11 @@ export default async function AdminReportsPage({
         </div>
       </header>
 
-      {/* التبويبات */}
+     {/* التبويبات */}
       <div className="rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-2xs">
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-center font-bold text-xs">
           <Link
+            replace
             href="/admin/reports?filter=PENDING"
             className={`rounded-lg py-2.5 transition flex items-center justify-center gap-1.5 ${
               validFilter === "PENDING"
@@ -252,6 +253,7 @@ export default async function AdminReportsPage({
           </Link>
 
           <Link
+            replace
             href="/admin/reports?filter=RESOLVED"
             className={`rounded-lg py-2.5 transition flex items-center justify-center gap-1.5 ${
               validFilter === "RESOLVED"
@@ -264,6 +266,7 @@ export default async function AdminReportsPage({
           </Link>
 
           <Link
+            replace
             href="/admin/reports?filter=DISMISSED"
             className={`rounded-lg py-2.5 transition flex items-center justify-center gap-1.5 ${
               validFilter === "DISMISSED"
@@ -276,7 +279,6 @@ export default async function AdminReportsPage({
           </Link>
         </div>
       </div>
-
       {/* قائمة البلاغات */}
       <section className="space-y-4">
         {reports.length > 0 ? (
@@ -587,11 +589,9 @@ export default async function AdminReportsPage({
               <CheckCircle2 className="h-6 w-6" />
             </div>
             <p className="text-xs font-black text-slate-700">
-              لا توجد بلاغات هنا
+          لا توجد بلاغات هنا
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              لا توجد بلاغات مسجلة ضمن هذا التصنيف حالياً.
-            </p>
+      
           </div>
         )}
       </section>
