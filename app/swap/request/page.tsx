@@ -5,9 +5,10 @@ import { SwapType } from "@/generated/prisma-full";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+
 import BackButton from "@/components/BackButton";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
-import { ArrowLeftRight, Coins, MapPin } from "lucide-react";
+import { ArrowLeftRight,ArrowRight, Coins, MapPin } from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
 
 export default async function SwapRequestPage({
@@ -129,11 +130,15 @@ export default async function SwapRequestPage({
       dir="rtl"
       className="mx-auto w-full max-w-2xl space-y-3.5 px-3 sm:px-4 pb-28 text-[#0F172A]"
     >
-      {/* 🧭 الهيدر القياسي الموحد */}
       <header className="relative flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
-        <div className="shrink-0 z-10">
-          <BackButton />
-        </div>
+        <Link
+          href={`/books/${book.id}`}
+          title="رجوع"
+          aria-label="رجوع إلى صفحة الكتاب"
+          className="relative z-10 flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+        >
+          <ArrowRight className="h-5 w-5" />
+        </Link>
 
         <h1 className="absolute inset-x-0 text-center text-sm sm:text-base font-black text-slate-900 pointer-events-none">
           اطلب الكتاب

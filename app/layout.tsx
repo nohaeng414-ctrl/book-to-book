@@ -7,10 +7,14 @@ import NavigationLoading from "@/components/NavigationLoading";
 import LocaleTextLayer from "@/components/LocaleTextLayer";
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
-
+import SplashIntro from "@/components/SplashIntro";
 export const metadata: Metadata = {
-  title: "كتاب بكتاب | منصة تبادل الكتب",
-  description: "اكتشف كتباً جديدة واستبدل كتبك القديمة بكل سهولة.",
+  title: "كتاب بكتاب",
+  description: "استبدل كتبك واكتشف عوالم جديدة",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <NetworkStatus />
           <NavigationLoading />
           <AndroidBackHandler />
-
+          <SplashIntro />
           <div className="w-full flex-1 overflow-y-auto bg-[#F1F5F9] pb-8">
             {children}
           </div>

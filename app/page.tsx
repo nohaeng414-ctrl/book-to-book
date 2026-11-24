@@ -368,6 +368,29 @@ export default async function Home({
 
       {/* بنر الترحيب */}
       <section dir={isEnglish ? "ltr" : "rtl"} className="w-full px-4 pb-7 pt-4 sm:px-6">
+        <style>{`
+          @keyframes ktbBookSoftFloat {
+            0%, 100% {
+              transform: translate3d(0, 0, 0) rotate(0deg);
+            }
+            50% {
+              transform: translate3d(0, -4px, 0) rotate(-0.8deg);
+            }
+          }
+          .ktb-book-float-1 {
+            animation: ktbBookSoftFloat 3.2s ease-in-out infinite;
+            will-change: transform;
+          }
+          .ktb-book-float-2 {
+            animation: ktbBookSoftFloat 3.2s ease-in-out 0.4s infinite;
+            will-change: transform;
+          }
+          .ktb-book-float-3 {
+            animation: ktbBookSoftFloat 3.2s ease-in-out 0.8s infinite;
+            will-change: transform;
+          }
+        `}</style>
+
         <div className="group relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#334155] px-5 py-8 text-white sm:px-9 sm:py-11 shadow-xl shadow-[#0F172A]/20 border border-[#334155]">
           <div aria-hidden="true" className="absolute -top-16 end-[-3rem] h-48 w-48 rounded-full border border-white/10" />
           <div aria-hidden="true" className="absolute -top-9 end-[-1.25rem] h-32 w-32 rounded-full border border-white/10" />
@@ -382,9 +405,9 @@ export default async function Home({
                 {isEnglish ? "A community of readers" : "مجتمع القرّاء"}
               </p>
               <h1 className="text-2xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                {isEnglish ? "Discover new books" : "اكتشف كتباً جديدة"}
+                {isEnglish ? "Discover new books" : "استبدل كتبك"}
                 <span className="block text-[#E2E8F0] mt-1.5 font-bold">
-                  {isEnglish ? "and exchange your books" : "واستبدل كتابك"}
+                  {isEnglish ? "and exchange your books" : "واكتشف عوالم جديدة"}
                 </span>
               </h1>
             </div>
@@ -393,19 +416,19 @@ export default async function Home({
               aria-hidden="true"
               className="absolute -bottom-8 end-4 sm:static sm:mt-auto sm:translate-y-10 flex items-end gap-1.5 sm:gap-2.5 shrink-0 origin-bottom transition-transform duration-500 group-hover:scale-105"
             >
-              <div className="relative h-16 w-5 sm:h-24 sm:w-8 self-end group/yellow hover:-translate-y-4 transition-transform duration-300">
+              <div className="ktb-book-float-1 relative h-16 w-5 sm:h-24 sm:w-8 self-end group/yellow hover:-translate-y-4 transition-transform duration-300">
                 <div className="absolute inset-0 origin-bottom-left rounded-t-md bg-[#E8B042] shadow-2xl border-r border-white/20">
                   <span className="absolute top-3 right-1/2 translate-x-1/2 h-4 w-1 rounded-full bg-black/15" />
                   <span className="absolute bottom-2 left-0 right-0 h-1 bg-black/10" />
                 </div>
               </div>
-              <div className="relative h-22 w-6 sm:h-32 sm:w-9 self-end group/pink hover:-translate-y-8 transition-transform duration-300 delay-75">
+              <div className="ktb-book-float-2 relative h-22 w-6 sm:h-32 sm:w-9 self-end group/pink hover:-translate-y-8 transition-transform duration-300 delay-75">
                 <div className="absolute inset-0 origin-bottom-left rounded-t-md bg-[#D98CB3] shadow-2xl border-r border-white/25">
                   <span className="absolute top-4 right-1/2 translate-x-1/2 h-6 w-1 rounded-full bg-white/25" />
                   <span className="absolute bottom-2 left-0 right-0 h-1 bg-black/10" />
                 </div>
               </div>
-              <div className="relative h-18 w-5 sm:h-28 sm:w-8 self-end group/blue hover:-translate-y-6 transition-transform duration-300 delay-150">
+              <div className="ktb-book-float-3 relative h-18 w-5 sm:h-28 sm:w-8 self-end group/blue hover:-translate-y-6 transition-transform duration-300 delay-150">
                 <div className="absolute inset-0 origin-bottom-left rounded-t-md bg-[#5A9BAE] shadow-xl border-r border-white/20">
                   <span className="absolute top-3 right-1/2 translate-x-1/2 h-4 w-1 rounded-full bg-black/15" />
                   <span className="absolute bottom-2 left-0 right-0 h-1 bg-black/10" />

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  Megaphone,
 } from "lucide-react";
 import { toArabicNumerals } from "@/lib/formatting";
 
@@ -91,22 +92,31 @@ export default async function AdminDashboardPage() {
           <BackButton className="!h-auto !w-auto !rounded-none !border-0 !bg-transparent !p-1.5 !backdrop-blur-none text-slate-200 hover:!bg-transparent hover:text-white active:scale-95 [&_svg]:text-slate-200" />
         </div>
 
-        {/* 📢 زر إشعار للجميع */}
-        <div className="absolute top-4 left-4 z-20">
-          <AdminBroadcastModal />
-        </div>
-
         <div className="relative z-10 flex flex-col items-center w-full text-center pt-2">
-   <div className="relative mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/20 via-amber-500/10 to-transparent ring-1 ring-amber-400/30 shadow-[0_0_25px_-5px_rgba(251,191,36,0.35)] backdrop-blur-md">
-  <ShieldAlert className="h-6 w-6 text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-</div>
+          <div className="relative mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/20 via-amber-500/10 to-transparent ring-1 ring-amber-400/30 shadow-[0_0_25px_-5px_rgba(251,191,36,0.35)] backdrop-blur-md">
+            <ShieldAlert className="h-6 w-6 text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+          </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             لوحة تحكم الإدارة
           </h1>
-
-         
         </div>
       </header>
+
+      {/* 📢 شريط إشعار الجميع: الزر مباشرة جنب الكلام وبلون واضح ومتباين */}
+      <section className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 shadow-2xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-200/80">
+            <Megaphone className="h-4 w-4" />
+          </div>
+          <h2 className="truncate text-xs sm:text-sm font-black text-slate-900">
+            إشعار عام لجميع الأعضاء
+          </h2>
+        </div>
+
+        <div className="shrink-0 [&_button]:!rounded-xl [&_button]:!border-0 [&_button]:!bg-amber-400 [&_button]:!px-3.5 [&_button]:!py-2 [&_button]:!text-xs [&_button]:!font-black [&_button]:!text-slate-950 [&_button]:!shadow-2xs hover:[&_button]:!bg-amber-300 [&_button]:active:scale-95 [&_svg]:!text-slate-950">
+          <AdminBroadcastModal />
+        </div>
+      </section>
 
       {/* 📊 بطاقات المؤشرات الأساسية (قابلة للضغط + معدل النمو) */}
       <section aria-label="إحصائيات المنصة" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
