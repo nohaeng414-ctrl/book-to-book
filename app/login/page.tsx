@@ -7,7 +7,6 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function LoginPage() {
-  
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,80 +53,111 @@ export default function LoginPage() {
   };
 
   return (
-    <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#F1F5F9] px-4 py-12 text-[#0F172A]">
-      <div className="w-full max-w-md space-y-8 rounded-3xl border border-[#E2E8F0] bg-white p-8 shadow-xl shadow-[#0F172A]/5">
-   
- <div className="flex flex-col items-center text-center">
-  <div className="mb-4">
-    <Image 
-      src="/logo.png" 
-      alt="شعار كتاب بكتاب" 
-      width={160} 
-      height={160} 
-      className="mx-auto h-40 w-40 object-contain drop-shadow-md transition hover:scale-105" 
-    />
-  </div>
-  <h1 className="text-2xl font-extrabold tracking-tight text-[#0F172A]">أهلاً بك مجدداً</h1>
-  <p className="mt-1 text-sm text-[#64748B]">سجل دخولك لتستبدل كتبك بكل سهولة</p>
-</div>
+    <main
+      dir="rtl"
+      className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900"
+    >
+      <div className="w-full max-w-sm space-y-7 rounded-3xl border border-slate-200/80 bg-white p-7 sm:p-8 shadow-sm">
+        {/* الشعار والعنوان */}
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 h-32 w-32 overflow-hidden rounded-[2rem] shadow-md transition-transform duration-300 hover:scale-105">
+            <Image
+              src="/icon.png"
+              alt="شعار كتاب بكتاب"
+              width={160}
+              height={160}
+              priority
+              className="h-full w-full rounded-[2rem] object-cover"
+            />
+          </div>
 
-        {/* رسالة الخطأ إن وجدت */}
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+            أهلاً بك مجدداً
+          </h1>
+          <p className="mt-1.5 text-sm text-slate-500">
+            استبدل كتبك واكتشف عوالم جديدة
+          </p>
+        </div>
+
+        {/* رسالة الخطأ */}
         {error && (
-          <div className="rounded-xl bg-red-50 p-3 text-center text-xs font-bold text-red-600 border border-red-200">
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-xs font-bold text-red-600"
+          >
             {error}
           </div>
         )}
 
         {/* نموذج تسجيل الدخول */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#334155] mb-1.5">البريد الإلكتروني</label>
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-xs font-bold text-slate-700"
+            >
+              البريد الإلكتروني
+            </label>
             <input
+              id="email"
               type="email"
               required
+              autoComplete="email"
+              dir="ltr"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] placeholder-[#94A3B8] focus:border-[#1E293B] focus:bg-white focus:outline-none transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-left text-sm text-slate-900 placeholder-slate-400 transition focus:border-slate-900 focus:bg-white focus:outline-none"
             />
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-[#334155]">كلمة المرور</label>
-              <Link href="/forgot-password" className="text-xs font-semibold text-[#64748B] hover:text-[#1E293B] transition">
+            <div className="mb-1.5 flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="text-xs font-bold text-slate-700"
+              >
+                كلمة المرور
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-slate-500 transition hover:text-slate-900"
+              >
                 نسيت كلمة المرور؟
               </Link>
             </div>
-           <input
-  type="password"
-  required
-  autoComplete="current-password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  placeholder="••••••••"
-  className="w-full rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] placeholder-[#94A3B8] focus:border-[#1E293B] focus:bg-white focus:outline-none transition"
-/>
+            <input
+              id="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              dir="ltr"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-left text-sm text-slate-900 placeholder-slate-400 transition focus:border-slate-900 focus:bg-white focus:outline-none"
+            />
           </div>
 
-          {/* زر تسجيل الدخول المصحح */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-gradient-to-r from-[#1E293B] to-[#334155] py-3.5 text-sm font-bold text-white shadow-md shadow-[#1E293B]/20 transition hover:from-[#0F172A] hover:to-[#1E293B] active:scale-[0.98] disabled:opacity-50"
+            className="mt-2 w-full rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
           </button>
         </form>
 
-        {/* الانتقال لصفحة إنشاء حساب */}
-        <div className="text-center text-xs text-[#64748B]">
+        {/* إنشاء حساب */}
+        <div className="border-t border-slate-100 pt-5 text-center text-xs text-slate-500">
           ليس لديك حساب بعد؟{" "}
-          <Link href="/register" className="font-bold text-[#1E293B] hover:underline">
+          <Link
+            href="/register"
+            className="font-bold text-slate-900 hover:underline"
+          >
             أنشئ حساباً جديداً
           </Link>
         </div>
-
       </div>
     </main>
   );

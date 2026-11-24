@@ -10,8 +10,10 @@ export default function ForgotPasswordPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setError("");
     setSuccessMessage("");
     setLoading(true);
@@ -27,9 +29,15 @@ const handleSubmit = async (e: React.FormEvent) => {
 
       if (!res.ok) {
         if (res.status === 503) {
-          setError(data?.error || "الخدمة غير متاحة مؤقتاً أو هناك مشكلة في الاتصال بقاعدة البيانات. حاول بعد قليل.");
+          setError(
+            data?.error ||
+              "الخدمة غير متاحة مؤقتاً أو هناك مشكلة في الاتصال بقاعدة البيانات. حاول بعد قليل."
+          );
         } else {
-          setError(data?.error || "تعذر إرسال الطلب. تحقق من البيانات المدخلة وحاول مرة أخرى.");
+          setError(
+            data?.error ||
+              "تعذر إرسال الطلب. تحقق من البيانات المدخلة وحاول مرة أخرى."
+          );
         }
         return;
       }
@@ -39,7 +47,6 @@ const handleSubmit = async (e: React.FormEvent) => {
           "إذا كان البريد مسجلاً، فستصلك رسالة تتضمن خطوات تغيير كلمة المرور."
       );
     } catch (err) {
-      // التقاط انقطاع الإنترنت أو فشل الوصول للسيرفر
       if (err instanceof TypeError || !navigator.onLine) {
         setError("تعذر الاتصال بالإنترنت. تحقق من الشبكة وحاول مرة أخرى.");
       } else {
@@ -53,80 +60,91 @@ const handleSubmit = async (e: React.FormEvent) => {
   return (
     <main
       dir="rtl"
-      className="flex min-h-screen items-center justify-center bg-[#F1F5F9] px-4 py-12 text-[#0F172A]"
+      className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-900"
     >
-      <div className="w-full max-w-md space-y-8 rounded-3xl border border-[#E2E8F0] bg-white p-8 shadow-xl shadow-[#0F172A]/5">
-        
-        {/* الشعار وعنوان الصفحة */}
+      <div className="w-full max-w-sm space-y-7 rounded-3xl border border-slate-200/80 bg-white p-7 sm:p-8 shadow-sm">
+        {/* الشعار والعنوان */}
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4">
+          <div className="mb-4 h-32 w-32 overflow-hidden rounded-[2rem] shadow-md transition-transform duration-300 hover:scale-105">
             <Image
-              src="/logo.png"
+              src="/icon.png"
               alt="شعار كتاب بكتاب"
-              width={140}
-              height={140}
-              className="mx-auto h-32 w-32 object-contain drop-shadow-md transition hover:scale-105"
+              width={160}
+              height={160}
+              priority
+              className="h-full w-full rounded-[2rem] object-cover"
             />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#0F172A]">
+
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
             استعادة كلمة المرور
           </h1>
-          <p className="mt-1 text-sm text-[#64748B]">
+          <p className="mt-1.5 text-sm text-slate-500">
             أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور
           </p>
         </div>
 
-        {/* رسالة الخطأ إن وجدت */}
+        {/* رسالة الخطأ */}
         {error && (
-          <div className="rounded-xl bg-red-50 p-3 text-center text-xs font-bold text-red-600 border border-red-200">
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-xs font-bold text-red-600"
+          >
             {error}
           </div>
         )}
 
         {/* رسالة النجاح */}
         {successMessage && (
-          <div className="rounded-xl bg-emerald-50 p-3 text-center text-xs font-bold text-emerald-700 border border-emerald-200 leading-relaxed">
+          <div
+            role="status"
+            className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-xs font-bold leading-relaxed text-emerald-700"
+          >
             {successMessage}
           </div>
         )}
 
         {/* نموذج استعادة كلمة المرور */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#334155] mb-1.5">
+            <label
+              htmlFor="forgot-email"
+              className="mb-1.5 block text-xs font-bold text-slate-700"
+            >
               البريد الإلكتروني
             </label>
             <input
+              id="forgot-email"
               type="email"
               required
+              autoComplete="email"
+              dir="ltr"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="w-full rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] placeholder-[#94A3B8] focus:border-[#1E293B] focus:bg-white focus:outline-none transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-left text-sm text-slate-900 placeholder-slate-400 transition focus:border-slate-900 focus:bg-white focus:outline-none"
             />
           </div>
 
-          {/* زر الإرسال */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-gradient-to-r from-[#1E293B] to-[#334155] py-3.5 text-sm font-bold text-white shadow-md shadow-[#1E293B]/20 transition hover:from-[#0F172A] hover:to-[#1E293B] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            className="mt-2 w-full rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "جاري إرسال الرابط..." : "استعادة كلمة المرور"}
           </button>
         </form>
 
-        {/* العودة لصفحة تسجيل الدخول */}
-        <div className="text-center text-xs text-[#64748B]">
+        {/* العودة لتسجيل الدخول */}
+        <div className="border-t border-slate-100 pt-5 text-center text-xs text-slate-500">
           تذكرت كلمة المرور؟{" "}
           <Link
             href="/login"
-            className="font-bold text-[#1E293B] hover:underline transition"
+            className="font-bold text-slate-900 hover:underline"
           >
             تسجيل الدخول
           </Link>
         </div>
-
       </div>
     </main>
   );
