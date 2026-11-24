@@ -8,7 +8,11 @@ export default withAuth((req) => {
   const { nextUrl } = req;
 
   // السماح بعرض صفحات الكتب للزوار ومحركات البحث
-  if (nextUrl.pathname.startsWith("/books/")) {
+if (
+    nextUrl.pathname.startsWith("/books/") ||
+    nextUrl.pathname === "/profile/privacy" ||
+    nextUrl.pathname.startsWith("/profile/privacy/")
+  ) {
     return;
   }
 

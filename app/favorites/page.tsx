@@ -94,8 +94,7 @@ export default async function FavoritesPage() {
             <Heart className="h-5 w-5" />
           </span>
           <h2 className="mt-2 text-sm font-extrabold text-slate-900">
-           احفظ كتبك المفضلة للوصول إليها سريعاً.
-          </h2>
+لا توجد كتب محفوظة بعد          </h2>
           <p className="mt-1 text-xs text-slate-400">
             احفظ الكتب التي تعجبك لتصل إليها بسهولة لاحقاً.
           </p>

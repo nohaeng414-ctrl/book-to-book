@@ -2,6 +2,8 @@ import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/admin"; // 👈 استيراد دالة التحقق من المشرف
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
+
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import { redirect } from "next/navigation";
 import {
@@ -36,13 +38,9 @@ export default async function SettingsPage() {
     <main dir="rtl" className="mx-auto w-full max-w-3xl space-y-6 px-3 sm:px-4 py-6 text-[#0F172A]">
       {/* شريط الرجوع للبروفايل */}
       <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
-        <Link
-          href="/profile"
-          title="رجوع"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors"
-        >
-          <ArrowRight className="h-5 w-5" />
-        </Link>
+            <div className="shrink-0 z-10">
+                 <BackButton />
+               </div>
         <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
           الإعدادات
         </h1>
@@ -110,7 +108,7 @@ export default async function SettingsPage() {
           >
             <div className="flex items-center gap-3">
               <Lock className="h-4 w-4 text-slate-500" />
-              تغيير كلمة المرور
+             الأمان وإدارة الحساب
             </div>
             <ChevronLeft className="h-4 w-4 text-slate-400" />
           </Link>

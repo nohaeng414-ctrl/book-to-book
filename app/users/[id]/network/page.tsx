@@ -20,7 +20,6 @@ export default async function UserNetworkPage({
 
   const session = await auth();
 
-  // جلب المستخدم الحالي وقائمة من يتابعهم للتأكد من حالة المتابعة لكل بطاقة
   const currentUser = session?.user?.email
     ? await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -31,7 +30,6 @@ export default async function UserNetworkPage({
       })
     : null;
 
-  // جلب بيانات صاحب الصفحة مع قائمتي المتابعين ومن يتابعهم
   const user = await prisma.user.findUnique({
     where: { id },
     select: {
@@ -66,14 +64,11 @@ export default async function UserNetworkPage({
 
   if (!user) notFound();
 
-  // القائمة المعروضة بحسب التبويب النشط
   const list = activeTab === "followers" ? user.followedBy : user.following;
   const myFollowingIds = new Set(currentUser?.following?.map((f) => f.id) ?? []);
 
   return (
     <main dir="rtl" className="mx-auto w-full max-w-2xl space-y-4 px-3 sm:px-4 pt-4 pb-24 text-[#0F172A]">
-      
-      {/* 🧭 الهيدر العلوي */}
       <header className="flex items-center justify-between border-b border-slate-200 pb-3">
         <div className="flex items-center gap-3">
           <BackButton />
@@ -84,10 +79,11 @@ export default async function UserNetworkPage({
         </div>
       </header>
 
-      {/* 📑 تبويبات العرض (Tabs) بالتسميات العالمية */}
       <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 text-center font-bold text-xs">
         <Link
           href={`/users/${user.id}/network?tab=followers`}
+          replace
+          scroll={false}
           className={`rounded-xl py-2 transition ${
             activeTab === "followers"
               ? "bg-white text-slate-900 shadow-2xs font-black"
@@ -99,17 +95,18 @@ export default async function UserNetworkPage({
 
         <Link
           href={`/users/${user.id}/network?tab=following`}
+          replace
+          scroll={false}
           className={`rounded-xl py-2 transition ${
             activeTab === "following"
               ? "bg-white text-slate-900 shadow-2xs font-black"
               : "text-slate-500 hover:text-slate-700"
           }`}
         >
-           المتابعة ({toArabicNumerals(user._count.following)})
+          المتابعة ({toArabicNumerals(user._count.following)})
         </Link>
       </div>
 
-      {/* 👥 قائمة المستخدمين */}
       <section className="space-y-2.5 pt-1">
         {list.length > 0 ? (
           list.map((item) => {
@@ -135,16 +132,15 @@ export default async function UserNetworkPage({
                   </div>
                 </Link>
 
-                {/* زر المتابعة الفردي التفاعلي */}
-              {!isMe && currentUser && (
-  <div className="shrink-0">
-    <FollowButton
-      targetUserId={item.id}
-      initialIsFollowing={isFollowingThisUser}
-      currentUserId={currentUser.id}
-    />
-  </div>
-)}
+                {!isMe && currentUser && (
+                  <div className="shrink-0">
+                    <FollowButton
+                      targetUserId={item.id}
+                      initialIsFollowing={isFollowingThisUser}
+                      currentUserId={currentUser.id}
+                    />
+                  </div>
+                )}
               </div>
             );
           })
@@ -156,7 +152,6 @@ export default async function UserNetworkPage({
           </div>
         )}
       </section>
-
     </main>
   );
 }

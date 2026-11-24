@@ -61,25 +61,7 @@ export default async function SwapHistoryPage() {
         <div className="w-10" aria-hidden="true" />
       </header>
 
-      {/* بطاقة ملخص سريعة بنفس روح بطاقة الإعدادات */}
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 border border-teal-100">
-            <ArrowRightLeft className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900">
-              العمليات المكتملة
-            </p>
-            <p className="truncate text-xs text-slate-400">
-              الكتب والنقاط في عملياتك التي تم تأكيد استلامها
-            </p>
-          </div>
-        </div>
-        <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-700">
-          {swaps.length}
-        </span>
-      </div>
+     
 
       {swaps.length === 0 ? (
         <section className="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center shadow-2xs">

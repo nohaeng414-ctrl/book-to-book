@@ -85,7 +85,7 @@ export default function DeleteBookForm({
 
         {/* جسم النافذة */}
         <div className="p-5">
-          {/* 👈 هنا بالضبط: عرض اسم الكتاب المراد حذفه داخل النافذة */}
+          {/*  هنا بالضبط: عرض اسم الكتاب المراد حذفه داخل النافذة */}
           <div className="flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200/70 p-2.5 text-xs font-bold text-slate-800">
             <BookOpen className="h-4 w-4 text-teal-600 shrink-0" />
             <span className="truncate">{bookTitle}</span>

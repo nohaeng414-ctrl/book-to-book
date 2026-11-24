@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
@@ -13,8 +13,17 @@ import {
   AlertCircle,
 } from "lucide-react";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
+import DeleteAccountButton from "@/components/DeleteAccountButton";
 
 const PAGE_PATH = "/profile/security";
+
+const ACTIVE_SWAP_STATUSES = [
+  "PENDING",
+  "ACCEPTED",
+  "AWAITING_DELIVERY",
+  "AWAITING_CONFIRMATION",
+  "DISPUTED",
+] as const;
 
 export default async function SecurityPage({
   searchParams,
@@ -27,7 +36,7 @@ export default async function SecurityPage({
   const params = await searchParams;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { hashedPassword: true },
+    select: { id: true, hashedPassword: true },
   });
   if (!user) redirect("/login");
 
@@ -103,10 +112,114 @@ export default async function SecurityPage({
     redirect(`${PAGE_PATH}?saved=1`);
   }
 
+  async function deleteAccount() {
+    "use server";
+    const current = await auth();
+    if (!current?.user?.email) redirect("/login");
+
+    const account = await prisma.user.findUnique({
+      where: { email: current.user.email },
+      select: { id: true },
+    });
+
+    if (!account) {
+      redirect("/login");
+    }
+
+    const activeSwapsCount = await prisma.swap.count({
+      where: {
+        status: { in: [...ACTIVE_SWAP_STATUSES] },
+        OR: [
+          { requesterId: account.id },
+          { receiverId: account.id },
+          { requestedBook: { ownerId: account.id } },
+          { offeredBook: { ownerId: account.id } },
+        ],
+      },
+    });
+
+    if (activeSwapsCount > 0) {
+      redirect(
+        `${PAGE_PATH}?error=${encodeURIComponent(
+          "لا يمكن حذف الحساب لوجود طلبات تبادل معلّقة أو قيد التنفيذ. يرجى إتمام أو إلغاء الطلبات المعلّقة أولاً."
+        )}`
+      );
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const userBookIds = (
+          await tx.book.findMany({
+            where: { ownerId: account.id },
+            select: { id: true },
+          })
+        ).map((b) => b.id);
+
+        const relatedSwapIds = (
+          await tx.swap.findMany({
+            where: {
+              OR: [
+                { requesterId: account.id },
+                { receiverId: account.id },
+                ...(userBookIds.length > 0
+                  ? [
+                      { requestedBookId: { in: userBookIds } },
+                      { offeredBookId: { in: userBookIds } },
+                    ]
+                  : []),
+              ],
+            },
+            select: { id: true },
+          })
+        ).map((s) => s.id);
+
+        if (relatedSwapIds.length > 0) {
+          await tx.pointTransaction.deleteMany({
+            where: {
+              OR: [
+                { userId: account.id },
+                { swapId: { in: relatedSwapIds } },
+              ],
+            },
+          });
+
+          await tx.swap.deleteMany({
+            where: { id: { in: relatedSwapIds } },
+          });
+        }
+
+        await tx.pointTransaction.deleteMany({
+          where: { userId: account.id },
+        });
+
+        await tx.user.update({
+          where: { id: account.id },
+          data: {
+            following: { set: [] },
+            followedBy: { set: [] },
+            favoriteBooks: { set: [] },
+          },
+        });
+
+        await tx.user.delete({
+          where: { id: account.id },
+        });
+      });
+    } catch {
+      redirect(
+        `${PAGE_PATH}?error=${encodeURIComponent(
+          "تعذّر إتمام حذف الحساب حالياً، يرجى المحاولة لاحقاً."
+        )}`
+      );
+    }
+
+    await signOut({ redirectTo: "/login" });
+  }
+
   return (
     <main
       dir="rtl"
-      className="mx-auto w-full max-w-2xl space-y-5 px-3 sm:px-4 pt-4 pb-28 text-[#0F172A]"
+      className="mx-auto w-full max-w-3xl space-y-6 px-3 sm:px-4 py-6 text-[#0F172A]"
     >
       <header className="relative -mt-6 mb-6 flex h-14 w-full items-center justify-between rounded-b-2xl border-x border-b border-slate-200 bg-white px-3 shadow-2xs">
         <Link
@@ -117,12 +230,16 @@ export default async function SecurityPage({
           <ArrowRight className="h-5 w-5" />
         </Link>
         <h1 className="text-base font-extrabold text-slate-900 tracking-tight select-none">
-          تغيير كلمة المرور
+          الأمان وإدارة الحساب
         </h1>
         <div className="w-10" aria-hidden="true" />
       </header>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs">
+        <h2 className="mb-4 text-sm font-black text-slate-900">
+          تغيير كلمة المرور
+        </h2>
+
         {params.error && (
           <div
             role="alert"
@@ -228,6 +345,18 @@ export default async function SecurityPage({
             </div>
           </form>
         )}
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs space-y-3">
+        <h2 className="text-sm font-black text-slate-900">
+          إدارة الحساب
+        </h2>
+        <p className="text-xs leading-relaxed text-slate-600">
+          في حال رغبت بحذف حسابك نهائياً، تأكد أولاً من عدم وجود طلبات تبادل معلّقة.
+        </p>
+        <div className="pt-1">
+          <DeleteAccountButton onDelete={deleteAccount} />
+        </div>
       </section>
     </main>
   );

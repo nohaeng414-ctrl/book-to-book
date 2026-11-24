@@ -8,7 +8,6 @@ import { COUNTRIES_WITH_CITIES as countryCitiesMap } from "@/lib/locations";
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Controlled Form States
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -20,7 +19,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const availableCities = selectedCountry ? countryCitiesMap[selectedCountry] || ["مدينة أخرى"] : [];
+  const availableCities = selectedCountry
+    ? countryCitiesMap[selectedCountry] || ["مدينة أخرى"]
+    : [];
 
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCountry(e.target.value);
@@ -87,11 +88,13 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rounded-3xl border border-[#E2E8F0] bg-white p-8 shadow-xl shadow-[#0F172A]/5">
-        
-        {/* رأس الصفحة */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold text-[#0F172A]">انضم إلى مجتمع القرّاء</h1>
-          <p className="mt-2 text-xs font-medium text-[#64748B]">أنشئ حسابك وابدأ استبدال كتبك بكل سهولة</p>
+          <h1 className="text-2xl font-extrabold text-[#0F172A]">
+            انضم إلى مجتمع القرّاء
+          </h1>
+          <p className="mt-2 text-xs font-medium text-[#64748B]">
+            أنشئ حسابك وابدأ استبدال كتبك بكل سهولة
+          </p>
         </div>
 
         {error && (
@@ -100,11 +103,11 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {/* إضافة method="POST" كطبقة حماية ضد التحول إلى GET بالرابط */}
         <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
-          
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-[#334155]">الاسم الكامل</label>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              الاسم الكامل
+            </label>
             <input
               type="text"
               name="name"
@@ -118,7 +121,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-[#334155]">البريد الإلكتروني</label>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              البريد الإلكتروني
+            </label>
             <input
               type="email"
               name="email"
@@ -131,9 +136,10 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* قائمة الدول */}
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-[#334155]">الدولة</label>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              الدولة
+            </label>
             <select
               name="country"
               required
@@ -141,37 +147,46 @@ export default function RegisterPage() {
               onChange={handleCountryChange}
               className="w-full rounded-xl border border-[#CBD5E1] bg-white px-4 py-3 text-xs font-medium text-[#334155] shadow-sm focus:border-[#1E293B] focus:outline-none transition cursor-pointer"
             >
-              <option value="" disabled>اختر الدولة</option>
+              <option value="" disabled>
+                اختر الدولة
+              </option>
               {Object.keys(countryCitiesMap).map((country) => (
-                <option key={country} value={country}>{country}</option>
+                <option key={country} value={country}>
+                  {country}
+                </option>
               ))}
             </select>
           </div>
 
-     {/* قائمة المدن */}
-<div>
-  <label className="mb-1.5 block text-xs font-bold text-[#334155]">المدينة</label>
-  <select
-    name="city"
-    required
-    value={selectedCity}
-    onChange={(e) => setSelectedCity(e.target.value)}
-    disabled={!selectedCountry || availableCities.length === 0}
-    className="w-full rounded-xl border border-[#CBD5E1] bg-white px-4 py-3 text-xs font-medium text-[#334155] shadow-sm focus:border-[#1E293B] focus:outline-none transition cursor-pointer disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] disabled:cursor-not-allowed"
-  >
-    <option value="">
-      {selectedCountry ? "-- اختر المدينة --" : "الرجاء اختيار الدولة أولاً"}
-    </option>
-    {availableCities.map((city) => (
-      <option key={city} value={city}>
-        {city}
-      </option>
-    ))}
-  </select>
-</div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              المدينة
+            </label>
+            <select
+              name="city"
+              required
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              disabled={!selectedCountry || availableCities.length === 0}
+              className="w-full rounded-xl border border-[#CBD5E1] bg-white px-4 py-3 text-xs font-medium text-[#334155] shadow-sm focus:border-[#1E293B] focus:outline-none transition cursor-pointer disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {selectedCountry
+                  ? "-- اختر المدينة --"
+                  : "الرجاء اختيار الدولة أولاً"}
+              </option>
+              {availableCities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-[#334155]">الحي</label>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              الحي
+            </label>
             <input
               type="text"
               name="district"
@@ -184,7 +199,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-[#334155]">كلمة المرور</label>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              كلمة المرور
+            </label>
             <input
               type="password"
               name="password"
@@ -198,7 +215,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-[#334155]">تأكيد كلمة المرور</label>
+            <label className="mb-1.5 block text-xs font-bold text-[#334155]">
+              تأكيد كلمة المرور
+            </label>
             <input
               type="password"
               name="confirmPassword"
@@ -218,15 +237,27 @@ export default function RegisterPage() {
           >
             {loading ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
           </button>
+
+          <p className="pt-1 text-center text-[11px] font-medium text-[#64748B]">
+            بإنشاء الحساب فإنك توافق على{" "}
+            <Link
+              href="/profile/privacy"
+              className="font-bold text-[#1E293B] underline underline-offset-2 hover:text-[#0F172A]"
+            >
+              سياسة الخصوصية
+            </Link>
+          </p>
         </form>
 
         <p className="mt-6 text-center text-xs font-medium text-[#64748B]">
           لديك حساب بالفعل؟{" "}
-          <Link href="/login" className="font-bold text-[#1E293B] hover:underline">
+          <Link
+            href="/login"
+            className="font-bold text-[#1E293B] hover:underline"
+          >
             تسجيل الدخول
           </Link>
         </p>
-
       </div>
     </div>
   );

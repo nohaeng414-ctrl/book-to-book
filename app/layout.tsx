@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
+import AndroidBackHandler from "@/components/AndroidBackHandler";
 import BottomNav from "@/components/BottomNav";
 import NetworkStatus from "@/components/NetworkStatus";
 import NavigationLoading from "@/components/NavigationLoading";
@@ -23,14 +23,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <LocaleTextLayer language={language}>
           <NetworkStatus />
           <NavigationLoading />
+          <AndroidBackHandler />
 
-        <div className="w-full flex-1 overflow-y-auto bg-[#F1F5F9] pb-8">
-          {children}
-        </div>
+          <div className="w-full flex-1 overflow-y-auto bg-[#F1F5F9] pb-8">
+            {children}
+          </div>
 
           <BottomNav />
         </LocaleTextLayer>
-
       </body>
     </html>
   );

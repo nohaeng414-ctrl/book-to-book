@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, X, Loader2, AlertTriangle } from "lucide-react";
+import { Ban, Loader2, AlertTriangle } from "lucide-react";
 import { adminCancelSwap } from "@/app/actions/admin-swaps";
 
 const PRESET_REASONS = [
@@ -61,7 +61,6 @@ export default function AdminSwapCancelButton({
 
   return (
     <>
-      {/* زر إلغاء الطلب الواضح للإدارة */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -71,7 +70,6 @@ export default function AdminSwapCancelButton({
         <span>إلغاء الطلب إدارياً</span>
       </button>
 
-      {/* نافذة تأكيد الإلغاء */}
       {open && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-3 sm:p-4 backdrop-blur-xs"
@@ -82,7 +80,6 @@ export default function AdminSwapCancelButton({
             className="flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl text-right"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* رأس النافذة (ثابت) */}
             <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 p-4">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-100">
@@ -97,18 +94,8 @@ export default function AdminSwapCancelButton({
                   </p>
                 </div>
               </div>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
 
-            {/* المحتوى القابل للتمرير */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               <div className="space-y-1.5">
                 <label className="block text-xs font-black text-slate-700">
@@ -162,21 +149,12 @@ export default function AdminSwapCancelButton({
               )}
             </div>
 
-            {/* أزرار التأكيد والإلغاء (ثابتة بالأسفل) */}
-            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => setOpen(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-              >
-                تراجع
-              </button>
+            <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3">
               <button
                 type="button"
                 disabled={loading}
                 onClick={handleConfirmCancel}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-black text-white transition active:scale-95 disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-rose-700 active:scale-95 disabled:opacity-60 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -189,6 +167,15 @@ export default function AdminSwapCancelButton({
                     <span>تأكيد الإلغاء</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setOpen(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
+              >
+                تراجع
               </button>
             </div>
           </div>
