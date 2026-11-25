@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await blobFile.arrayBuffer());
 
     const blob = await put(blobPath, buffer, {
-      access: "public",
+      access: "private",
       contentType: blobFile.type || "image/jpeg",
     });
 
