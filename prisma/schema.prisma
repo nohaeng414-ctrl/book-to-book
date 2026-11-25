@@ -346,3 +346,12 @@ enum ReportStatus {
   RESOLVED
   DISMISSED
 }
+model TempSwapImage {
+  id        String   @id @default(cuid())
+  mimeType  String
+  data      Bytes
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

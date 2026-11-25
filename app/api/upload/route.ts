@@ -1,24 +1,17 @@
 import { NextResponse } from "next/server";
-import { put } from "@vercel/blob";
-import crypto from "crypto";
+import { prisma } from "@/lib/prisma"; // عدّلي المسار حسب مكان تعريف prisma عندك
 
 export const runtime = "nodejs";
 
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+const MAX_BYTES = 2 * 1024 * 60 * 1024;
+
 export async function POST(req: Request) {
   try {
-    const token = process.env.SWAP_BLOB_READ_WRITE_TOKEN;
-
-    if (!token) {
-      return NextResponse.json(
-        {
-          error:
-            process.env.NODE_ENV !== "production"
-              ? "متغير SWAP_BLOB_READ_WRITE_TOKEN غير موجود في البيئة الحالية. أضفه ثم أعد تشغيل السيرفر أو اعمل Redeploy."
-              : "تعذر رفع صورة الكتاب إلى التخزين السحابي.",
-        },
-        { status: 500 }
-      );
-    }
+    const now = new Date();
+    await prisma.tempSwapImage.deleteMany({
+      where: { expiresAt: { lte: now } },
+    });
 
     const formData = await req.formData();
     const file = formData.get("file");
@@ -45,38 +38,33 @@ export async function POST(req: Request) {
       );
     }
 
-    const maxBytes = 2 * 1024 * 1024;
-    if (blobFile.size > maxBytes) {
+    if (blobFile.size > MAX_BYTES) {
       return NextResponse.json(
         { error: "حجم الصورة بعد الضغط أكبر من المسموح." },
         { status: 400 }
       );
     }
 
-    const ext = blobFile.type === "image/webp" ? "webp" : "jpg";
-    const blobPath = `swaps/${Date.now()}-${crypto.randomUUID()}.${ext}`;
     const buffer = Buffer.from(await blobFile.arrayBuffer());
+    const expiresAt = new Date(Date.now() + TWENTY_FOUR_HOURS_MS);
 
-    const blob = await put(blobPath, buffer, {
-      access: "private",
-      contentType: blobFile.type || "image/jpeg",
-      token,
+    const record = await prisma.tempSwapImage.create({
+      data: {
+        mimeType: blobFile.type || "image/jpeg",
+        data: buffer,
+        expiresAt,
+      },
+      select: { id: true, expiresAt: true },
     });
 
     return NextResponse.json({
-      url: blob.url,
-      pathname: blob.pathname,
+      url: `/api/swap-image/${record.id}`,
+      expiresAt: record.expiresAt,
     });
   } catch (err) {
-    console.error("Swap image upload error:", err);
-    const details = err instanceof Error ? err.message : String(err);
+    console.error("Swap image DB upload error:", err);
     return NextResponse.json(
-      {
-        error:
-          process.env.NODE_ENV !== "production"
-            ? `تعذر رفع الصورة: ${details}`
-            : "تعذر رفع صورة الكتاب إلى التخزين السحابي.",
-      },
+      { error: "تعذر رفع صورة الكتاب إلى الخادم." },
       { status: 500 }
     );
   }
