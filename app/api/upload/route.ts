@@ -3,8 +3,22 @@ import { prisma } from "@/lib/prisma"; // عدّلي المسار حسب مكا�
 
 export const runtime = "nodejs";
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DAYS = 3;
+const MAX_RETENTION_DAYS = 15;
 const MAX_BYTES = 2 * 1024 * 1024;
+
+function resolveRetentionDays(rawDays: FormDataEntryValue | null, url: URL): number {
+  const fromForm = typeof rawDays === "string" ? Number(rawDays) : NaN;
+  const fromQuery = Number(url.searchParams.get("days"));
+  const candidate = Number.isFinite(fromForm) && fromForm > 0 ? fromForm : fromQuery;
+
+  if (!Number.isFinite(candidate) || candidate <= 0) {
+    return DEFAULT_DAYS;
+  }
+
+  return Math.min(Math.round(candidate), MAX_RETENTION_DAYS);
+}
 
 export async function POST(req: Request) {
   try {
@@ -45,8 +59,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const retentionDays = resolveRetentionDays(
+      formData.get("days"),
+      new URL(req.url)
+    );
     const buffer = Buffer.from(await blobFile.arrayBuffer());
-    const expiresAt = new Date(Date.now() + THREE_DAYS_MS);
+    const expiresAt = new Date(Date.now() + retentionDays * DAY_MS);
 
     const record = await prisma.tempSwapImage.create({
       data: {

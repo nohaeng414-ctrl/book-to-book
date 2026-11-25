@@ -20,6 +20,7 @@ interface ChatMessage {
 }
 
 const IMAGE_PREFIX = "__BOOK_IMG__:";
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
 function extractMapData(text: string): { url: string; label: string } | null {
   const match = text.match(/https:\/\/www\.google\.com\/maps\?q=[-0-9.,]+/);
@@ -48,8 +49,7 @@ function extractImageSrc(text: string): string | null {
 
 async function compressImageToBlob(
   file: File,
-  maxWidth = 800,
-  quality = 0.65
+  maxWidth = 800
 ): Promise<Blob> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -62,8 +62,8 @@ async function compressImageToBlob(
     const img = new window.Image();
     img.onload = () => {
       const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-      const width = Math.round(img.width * scale);
-      const height = Math.round(img.height * scale);
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
 
       const canvas = document.createElement("canvas");
       canvas.width = width;
@@ -76,17 +76,27 @@ async function compressImageToBlob(
       }
 
       ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error("Failed to compress image"));
-            return;
-          }
-          resolve(blob);
-        },
-        "image/jpeg",
-        quality
-      );
+
+      let quality = 0.72;
+      let blob: Blob | null = null;
+
+      const tryCompress = () => {
+        canvas.toBlob(
+          (result) => {
+            blob = result;
+            if (blob && (blob.size <= MAX_UPLOAD_BYTES || quality <= 0.4)) {
+              resolve(blob);
+              return;
+            }
+            quality -= 0.1;
+            tryCompress();
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      tryCompress();
     };
     img.onerror = () => reject(new Error("Failed to load image"));
     img.src = dataUrl;
@@ -94,12 +104,17 @@ async function compressImageToBlob(
 }
 
 async function uploadSwapImage(blob: Blob): Promise<string> {
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    throw new Error("حجم الصورة بعد الضغط أكبر من المسموح (2MB).");
+  }
+
   const formData = new FormData();
   formData.append("file", blob, `swap-${Date.now()}.jpg`);
 
   const res = await fetch("/api/upload", {
     method: "POST",
     body: formData,
+    cache: "no-store",
   });
 
   const data = await res.json().catch(() => null);
@@ -110,6 +125,34 @@ async function uploadSwapImage(blob: Blob): Promise<string> {
   }
 
   return url;
+}
+
+function SwapChatImage({ src }: { src: string }) {
+  const [expiredOrBroken, setExpiredOrBroken] = useState(false);
+
+  if (expiredOrBroken) {
+    return (
+      <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-[11px] font-bold text-amber-800">
+        انتهت صلاحية صورة التبديل المؤقتة أو تعذر تحميلها.
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block overflow-hidden rounded-xl"
+    >
+      <img
+        src={src}
+        alt="صورة إضافية للكتاب"
+        onError={() => setExpiredOrBroken(true)}
+        className="max-h-48 w-full object-cover rounded-xl"
+      />
+    </a>
+  );
 }
 
 export default function SwapChat({
@@ -189,7 +232,7 @@ export default function SwapChat({
     }
 
     try {
-      const compressed = await compressImageToBlob(file, 800, 0.65);
+      const compressed = await compressImageToBlob(file, 800);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPendingBlob(compressed);
       setPreviewUrl(URL.createObjectURL(compressed));
@@ -207,43 +250,33 @@ export default function SwapChat({
     setSending(true);
 
     try {
-      let sentAny = false;
-
       if (pendingBlob) {
         const uploadedUrl = await uploadSwapImage(pendingBlob);
         const imgPayload = `${IMAGE_PREFIX}${uploadedUrl}`;
         const imgRes = await sendSwapMessageAction(swapId, imgPayload);
 
-        if (imgRes?.success && imgRes.message) {
-          setMessages((prev) => [...prev, imgRes.message as ChatMessage]);
-          clearPendingImage();
-          sentAny = true;
-        } else {
+        if (!imgRes?.success || !imgRes.message) {
           setImageError(
             (imgRes as { error?: string } | null)?.error ||
               "تعذر إرسال صورة الكتاب، حاول مرة أخرى."
           );
-          setSending(false);
           return;
         }
+
+        setMessages((prev) => [...prev, imgRes.message as ChatMessage]);
+        clearPendingImage();
       }
 
       if (text) {
-        setInputText("");
         const txtRes = await sendSwapMessageAction(swapId, text);
         if (txtRes?.success && txtRes.message) {
           setMessages((prev) => [...prev, txtRes.message as ChatMessage]);
-          sentAny = true;
+          setInputText("");
         } else {
-          setInputText(text);
-          if (!sentAny) {
-            setImageError(
-              (txtRes as { error?: string } | null)?.error ||
-                "تعذر إرسال الرسالة، حاول مرة أخرى."
-            );
-            setSending(false);
-            return;
-          }
+          setImageError(
+            (txtRes as { error?: string } | null)?.error ||
+              "تعذر إرسال الرسالة، حاول مرة أخرى."
+          );
         }
       }
     } catch (err) {
@@ -312,18 +345,7 @@ export default function SwapChat({
                   }`}
                 >
                   {imageSrc ? (
-                    <a
-                      href={imageSrc}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block overflow-hidden rounded-xl"
-                    >
-                      <img
-                        src={imageSrc}
-                        alt="صورة إضافية للكتاب"
-                        className="max-h-48 w-full object-cover rounded-xl"
-                      />
-                    </a>
+                    <SwapChatImage src={imageSrc} />
                   ) : mapData ? (
                     <div className="space-y-1.5">
                       <div className="flex items-start gap-1.5 font-bold">

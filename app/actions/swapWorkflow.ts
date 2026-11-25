@@ -239,17 +239,24 @@ export async function confirmReceiptWithProofAction({
 }) {
   const session = await auth();
   if (!session?.user?.email) return { error: "يرجى تسجيل الدخول" };
-  if (typeof swapId !== "string" || !swapId)
-    return { error: "طلب المبادلة غير صالح" };
-  if (
-    proofUrl &&
-    (!/^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(
-      proofUrl
-    ) ||
-      proofUrl.length > 7_000_000)
-  ) {
-    return { error: "صيغة صورة الإثبات أو حجمها غير صالح" };
-  }
+if (typeof swapId !== "string" || !swapId)
+  return { error: "طلب المبادلة غير صالح" };
+
+const isValidSwapImageUrl =
+  typeof proofUrl === "string" &&
+  /^\/api\/swap-image\/[A-Za-z0-9_-]+$/.test(proofUrl) &&
+  proofUrl.length <= 200;
+
+const isValidLegacyDataUrl =
+  typeof proofUrl === "string" &&
+  /^data:image\/(?:jpeg|png|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(
+    proofUrl
+  ) &&
+  proofUrl.length <= 7_000_000;
+
+if (proofUrl && !isValidSwapImageUrl && !isValidLegacyDataUrl) {
+  return { error: "صيغة صورة الإثبات أو حجمها غير صالح" };
+}
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
