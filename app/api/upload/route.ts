@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma"; // عدّلي المسار حسب مكا�
 
 export const runtime = "nodejs";
 
-const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
-const MAX_BYTES = 2 * 1024 * 60 * 1024;
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const MAX_BYTES = 2 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const buffer = Buffer.from(await blobFile.arrayBuffer());
-    const expiresAt = new Date(Date.now() + TWENTY_FOUR_HOURS_MS);
+    const expiresAt = new Date(Date.now() + THREE_DAYS_MS);
 
     const record = await prisma.tempSwapImage.create({
       data: {
