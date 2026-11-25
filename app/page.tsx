@@ -366,7 +366,7 @@ export default async function Home({
         </div>
       </div>
 
-     {/* بنر الترحيب */}
+   {/* بنر الترحيب */}
       <section dir={isEnglish ? "ltr" : "rtl"} className="w-full px-4 pb-7 pt-4 sm:px-6">
         <style>{`
           @keyframes ktbBookSoftFloat {
@@ -398,9 +398,9 @@ export default async function Home({
           <div
             className={`relative z-10 flex flex-col sm:flex-row ${
               isEnglish ? "sm:flex-row-reverse text-left" : "text-right"
-            } justify-between gap-10 lg:gap-16`}
+            } justify-between gap-6`}
           >
-            <div className="relative max-w-md lg:max-w-lg z-10 pb-8 sm:pb-0">
+            <div className="relative max-w-xl z-10">
               <p className="mb-2 text-2xl sm:text-xl font-semibold tracking-wide text-[#94A3B8]">
                 {isEnglish ? "A community of readers" : "مجتمع القرّاء"}
               </p>
@@ -414,7 +414,7 @@ export default async function Home({
 
             <div
               aria-hidden="true"
-              className="absolute -bottom-8 end-8 sm:static sm:mt-auto sm:translate-y-10 sm:me-6 lg:me-12 flex items-end gap-1.5 sm:gap-2.5 shrink-0 origin-bottom transition-transform duration-500 group-hover:scale-105"
+              className="absolute -bottom-8 end-4 -translate-x-3 sm:static sm:mt-auto sm:translate-y-10 sm:-translate-x-6 lg:-translate-x-12 flex items-end gap-1.5 sm:gap-2.5 shrink-0 origin-bottom transition-transform duration-500 group-hover:scale-105"
             >
               <div className="ktb-book-float-1 relative h-16 w-5 sm:h-24 sm:w-8 self-end group/yellow hover:-translate-y-4 transition-transform duration-300">
                 <div className="absolute inset-0 origin-bottom-left rounded-t-md bg-[#E8B042] shadow-2xl border-r border-white/20">
@@ -438,7 +438,7 @@ export default async function Home({
           </div>
         </div>
       </section>
-      
+
       {/* تصفح حسب الفئة */}
       <section id="categories" className="w-full px-4 pb-6 sm:px-6">
         <div className="mb-3 flex items-center justify-between">
