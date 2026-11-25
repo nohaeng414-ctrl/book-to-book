@@ -5,6 +5,53 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { SwapError, transitionSwap } from "@/lib/swaps";
+import { del } from "@vercel/blob";
+
+const IMAGE_PREFIX = "__BOOK_IMG__:";
+
+async function cleanupSwapImagesOnComplete(swapId: string) {
+  try {
+    const swap = await prisma.swap.findUnique({
+      where: { id: swapId },
+      select: { status: true },
+    });
+    if (swap?.status !== "COMPLETED") return;
+
+    const imageMessages = await prisma.message.findMany({
+      where: {
+        swapId,
+        content: { startsWith: IMAGE_PREFIX },
+      },
+      select: {
+        id: true,
+        content: true,
+      },
+    });
+
+    if (imageMessages.length === 0) return;
+
+    const blobUrls = imageMessages
+      .map((m) => m.content.slice(IMAGE_PREFIX.length).trim())
+      .filter((url) => url.startsWith("https://"));
+
+    if (blobUrls.length > 0 && process.env.SWAP_BLOB_READ_WRITE_TOKEN) {
+      await del(blobUrls);
+    }
+
+    await Promise.all(
+      imageMessages.map((msg) =>
+        prisma.message.update({
+          where: { id: msg.id },
+          data: {
+            content: "تم إزالة صورة المعاينة تلقائياً بعد إتمام التبادل.",
+          },
+        })
+      )
+    );
+  } catch (error) {
+    console.error("Failed to cleanup swap images on completion:", error);
+  }
+}
 
 export async function acceptSwapWithOfferAction(formData: FormData) {
   const session = await auth();
@@ -236,6 +283,9 @@ export async function confirmReceiptWithProofAction({
         : { receiptProofUrl: proofUrl },
     });
   }
+
+  await cleanupSwapImagesOnComplete(swapId);
+
   revalidatePath(`/swaps/${swapId}`);
   revalidatePath("/requests");
   revalidatePath("/profile");
