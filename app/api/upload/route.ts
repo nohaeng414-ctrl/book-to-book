@@ -6,7 +6,9 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.SWAP_BLOB_READ_WRITE_TOKEN) {
+    const token = process.env.SWAP_BLOB_READ_WRITE_TOKEN;
+
+    if (!token) {
       return NextResponse.json(
         {
           error:
@@ -58,9 +60,13 @@ export async function POST(req: Request) {
     const blob = await put(blobPath, buffer, {
       access: "private",
       contentType: blobFile.type || "image/jpeg",
+      token,
     });
 
-    return NextResponse.json({ url: blob.url });
+    return NextResponse.json({
+      url: blob.url,
+      pathname: blob.pathname,
+    });
   } catch (err) {
     console.error("Swap image upload error:", err);
     const details = err instanceof Error ? err.message : String(err);
