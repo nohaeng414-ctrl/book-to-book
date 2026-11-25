@@ -366,8 +366,8 @@ export default async function Home({
         </div>
       </div>
 
- {/* بنر الترحيب */}
-      <section dir={isEnglish ? "ltr" : "rtl"} className="w-full px-4 pb-7 pt-4 sm:px-6">
+{/* بنر الترحيب */}
+      <section dir={isEnglish ? "ltr" : "rtl"} className="w-full px-4 pb-6 pt-4 sm:px-6">
         <style>{`
           @keyframes ktbBookSoftFloat {
             0%, 100% {
@@ -391,22 +391,22 @@ export default async function Home({
           }
         `}</style>
 
-        <div className="group relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#334155] px-5 py-8 text-white sm:px-9 sm:py-11 shadow-xl shadow-[#0F172A]/20 border border-[#334155]">
+        <div className="group relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#334155] px-5 py-6 text-white sm:px-9 sm:py-8 shadow-xl shadow-[#0F172A]/20 border border-[#334155]">
           <div aria-hidden="true" className="absolute -top-16 end-[-3rem] h-48 w-48 rounded-full border border-white/10" />
           <div aria-hidden="true" className="absolute -top-9 end-[-1.25rem] h-32 w-32 rounded-full border border-white/10" />
 
           <div
             className={`relative z-10 flex flex-col sm:flex-row ${
               isEnglish ? "sm:flex-row-reverse text-left" : "text-right"
-            } items-start sm:items-end justify-between gap-10 sm:gap-16 lg:gap-24`}
+            } items-start sm:items-end justify-between gap-6 sm:gap-12 lg:gap-16`}
           >
-            <div className="relative max-w-sm lg:max-w-md z-10 pb-8 sm:pb-0">
-              <p className="mb-2 text-2xl sm:text-xl font-semibold tracking-wide text-[#94A3B8]">
+            <div className="relative max-w-sm lg:max-w-md z-10">
+              <p className="mb-1.5 text-2xl sm:text-xl font-semibold tracking-wide text-[#94A3B8]">
                 {isEnglish ? "A community of readers" : "مجتمع القرّاء"}
               </p>
               <h1 className="text-2xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
                 {isEnglish ? "Discover new books" : "استبدل كتبك"}
-                <span className="block text-[#E2E8F0] mt-1.5 font-bold">
+                <span className="block text-[#E2E8F0] mt-1 font-bold">
                   {isEnglish ? "and exchange your books" : "واكتشف عوالم جديدة"}
                 </span>
               </h1>
@@ -414,7 +414,7 @@ export default async function Home({
 
             <div
               aria-hidden="true"
-              className="absolute -bottom-8 end-2 sm:static sm:mt-auto sm:translate-y-10 sm:me-12 lg:me-20 flex items-end gap-1.5 sm:gap-2.5 shrink-0 origin-bottom transition-transform duration-500 group-hover:scale-105"
+              className="absolute -bottom-6 end-1 sm:static sm:mt-auto sm:translate-y-8 sm:me-12 lg:me-20 flex items-end gap-1.5 sm:gap-2.5 shrink-0 origin-bottom transition-transform duration-500 group-hover:scale-105"
             >
               <div className="ktb-book-float-1 relative h-16 w-5 sm:h-24 sm:w-8 self-end group/yellow hover:-translate-y-4 transition-transform duration-300">
                 <div className="absolute inset-0 origin-bottom-left rounded-t-md bg-[#E8B042] shadow-2xl border-r border-white/20">
